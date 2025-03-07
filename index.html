@@ -4,19 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reproductor M3U - TV Retro</title>
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest">document.addEventListener("keydown", function(event) {
-    if (event.ctrlKey && event.key === 'f') {
-        event.preventDefault();
-        const select = document.getElementById('channelList');
-        const selectedOption = select.options[select.selectedIndex];
-        
-        if (selectedOption) {
-            selectedOption.style.backgroundColor = selectedOption.style.backgroundColor === 'green' ? '' : 'green';
-            selectedOption.style.color = selectedOption.style.backgroundColor === 'green' ? 'white' : '';
-        }
-    }
-});
-</script>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <script>
+        document.addEventListener("keydown", function(event) {
+            if (event.ctrlKey && event.key === 'f') {
+                event.preventDefault();
+                const select = document.getElementById('channelList');
+                const selectedOption = select.options[select.selectedIndex];
+                
+                if (selectedOption) {
+                    selectedOption.style.backgroundColor = selectedOption.style.backgroundColor === 'green' ? '' : 'green';
+                    selectedOption.style.color = selectedOption.style.backgroundColor === 'green' ? 'white' : '';
+                }
+            }
+        });
+    </script>
     <style>
         body {
             font-family: 'Courier New', Courier, monospace;
@@ -77,10 +79,10 @@
         <iframe id="iframePlayer" style="display:none;" allowfullscreen></iframe>
         <div id="controls-container">
             <input type="file" id="fileInput" accept=".m3u">
+            <input type="text" id="urlInput" placeholder="Ingresar URL de lista M3U...">
+            <button onclick="loadM3UFromURL()">Cargar desde URL</button>
             <input type="text" id="searchInput" placeholder="Buscar canal..." onkeyup="filterChannels()">
             <select id="channelList" size="10"></select>
-            
-            
             <button onclick="playChannel()">Reproducir</button>
         </div>
     </div>
@@ -116,6 +118,16 @@
             });
         }
         
+        function loadM3UFromURL() {
+            const url = document.getElementById('urlInput').value;
+            if (url) {
+                fetch(url)
+                    .then(response => response.text())
+                    .then(data => loadM3UFile(data))
+                    .catch(error => console.error('Error al cargar la lista:', error));
+            }
+        }
+
         function playChannel() {
             const url = document.getElementById('channelList').value;
             const videoPlayer = document.getElementById('videoPlayer');
@@ -166,3 +178,5 @@
     </script>
 </body>
 </html>
+
+
