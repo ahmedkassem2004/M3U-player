@@ -37,7 +37,6 @@
             margin: 5px 0;
             cursor: pointer;
             display: flex;
-            justify-content: space-between;
             align-items: center;
             border-radius: 5px;
             transition: 0.3s;
@@ -45,15 +44,12 @@
         .channel:hover {
             background: #666;
         }
-        .channel .live-badge {
-            background: red;
-            color: white;
-            padding: 5px;
-            border-radius: 3px;
-            font-size: 12px;
-        }
-        .playing {
-            background: green !important;
+        .channel img {
+            width: 30px;
+            height: 30px;
+            margin-right: 10px;
+            border-radius: 5px;
+            object-fit: cover;
         }
         video {
             width: 80%;
@@ -83,23 +79,6 @@
             border-radius: 5px;
             border: none;
         }
-        .channel-logo {
-            width: 30px;
-            height: 30px;
-            margin-right: 10px;
-            border-radius: 5px;
-        }
-        .now-playing {
-            position: absolute;
-            bottom: 10px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.7);
-            padding: 10px;
-            border-radius: 10px;
-            display: none;
-            color: white;
-        }
     </style>
 </head>
 <body>
@@ -109,7 +88,6 @@
         </div>
         <div class="content">
             <video id="videoPlayer" controls></video>
-            <div class="now-playing" id="nowPlaying"></div>
             <button onclick="showPopup()">Agregar Lista</button>
         </div>
     </div>
@@ -120,12 +98,15 @@
     </div>
     <script>
         let channelData = [];
+
         function showPopup() {
             document.getElementById('popup').style.display = 'block';
         }
+
         function hidePopup() {
             document.getElementById('popup').style.display = 'none';
         }
+
         function loadM3U() {
             const url = document.getElementById('urlInput').value;
             fetch(url)
@@ -136,30 +117,40 @@
                 })
                 .catch(error => console.error('Error cargando M3U:', error));
         }
+
         function parseM3U(content) {
             const lines = content.split('\n');
             let lastTitle = '';
+            let lastLogo = '';
+
             lines.forEach(line => {
                 line = line.trim();
                 if (line.startsWith('#EXTINF')) {
-                    lastTitle = line.split(',')[1] || 'Canal desconocido';
+                    const matchTitle = line.match(/,(.+)/);
+                    const matchLogo = line.match(/tvg-logo="([^"]+)"/);
+                    lastTitle = matchTitle ? matchTitle[1] : 'Canal desconocido';
+                    lastLogo = matchLogo ? matchLogo[1] : 'https://via.placeholder.com/30'; // Imagen predeterminada
                 } else if (line.startsWith('http')) {
-                    channelData.push({ name: lastTitle, url: line });
+                    channelData.push({ name: lastTitle, url: line, logo: lastLogo });
                 }
             });
+
             displayChannels();
         }
+
         function displayChannels() {
             const sidebar = document.getElementById('sidebar');
             sidebar.innerHTML = '<input type="text" id="searchBar" class="search-bar" placeholder="Buscar canal..." oninput="filterChannels()">';
+
             channelData.forEach(channel => {
                 const channelDiv = document.createElement('div');
                 channelDiv.className = 'channel';
-                channelDiv.innerHTML = `<span>${channel.name}</span><span class="live-badge">EN VIVO</span>`;
+                channelDiv.innerHTML = `<img src="${channel.logo}" alt="Logo"><span>${channel.name}</span>`;
                 channelDiv.onclick = () => playChannel(channel.url);
                 sidebar.appendChild(channelDiv);
             });
         }
+
         function playChannel(url) {
             const videoPlayer = document.getElementById('videoPlayer');
             if (url.includes('.m3u8')) {
@@ -170,7 +161,6 @@
                 } else {
                     videoPlayer.src = url;
                 }
-                videoPlayer.style.display = 'block';
                 videoPlayer.play();
             }
         }
