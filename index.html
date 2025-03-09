@@ -73,7 +73,7 @@
             margin: 5px 0;
         }
         .search-bar {
-            width: 90%;
+            width: 100%;
             padding: 5px;
             margin-bottom: 10px;
             border-radius: 5px;
@@ -85,6 +85,7 @@
     <div class="container">
         <div class="sidebar" id="sidebar">
             <input type="text" id="searchBar" class="search-bar" placeholder="Buscar canal..." oninput="filterChannels()">
+            <div id="channelList"></div>
         </div>
         <div class="content">
             <video id="videoPlayer" controls></video>
@@ -139,15 +140,30 @@
         }
 
         function displayChannels() {
-            const sidebar = document.getElementById('sidebar');
-            sidebar.innerHTML = '<input type="text" id="searchBar" class="search-bar" placeholder="Buscar canal..." oninput="filterChannels()">';
+            const channelList = document.getElementById('channelList');
+            channelList.innerHTML = '';
 
             channelData.forEach(channel => {
                 const channelDiv = document.createElement('div');
                 channelDiv.className = 'channel';
+                channelDiv.setAttribute('data-name', channel.name.toLowerCase()); // Añadir atributo para búsqueda
                 channelDiv.innerHTML = `<img src="${channel.logo}" alt="Logo"><span>${channel.name}</span>`;
                 channelDiv.onclick = () => playChannel(channel.url);
-                sidebar.appendChild(channelDiv);
+                channelList.appendChild(channelDiv);
+            });
+        }
+
+        function filterChannels() {
+            const searchInput = document.getElementById('searchBar').value.toLowerCase();
+            const channels = document.querySelectorAll('.channel');
+
+            channels.forEach(channel => {
+                const channelName = channel.getAttribute('data-name');
+                if (channelName.includes(searchInput)) {
+                    channel.style.display = 'flex';
+                } else {
+                    channel.style.display = 'none';
+                }
             });
         }
 
