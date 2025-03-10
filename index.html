@@ -7,8 +7,8 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            background-color: #121212;
-            color: white;
+            background-color: white;
+            color: #003366;
             text-align: center;
             margin: 0;
             padding: 0;
@@ -21,8 +21,12 @@
         .welcome-container {
             max-width: 500px;
             padding: 20px;
-            background: rgba(30, 30, 30, 0.9);
+            background: rgba(30, 30, 30, 0.1);
             border-radius: 10px;
+        }
+        img {
+            width: 150px;
+            margin-bottom: 20px;
         }
         .popup input, .popup button {
             display: block;
@@ -32,19 +36,20 @@
             font-size: 16px;
         }
         .popup button {
-            background: #ffcc00;
-            color: black;
+            background: #003366;
+            color: white;
             border: none;
             cursor: pointer;
             border-radius: 5px;
         }
         .popup button:hover {
-            background: #ffaa00;
+            background: #0055A4;
         }
     </style>
 </head>
 <body>
     <div class="welcome-container">
+        <img src="logo.webp" alt="M3U Player Logo">
         <h1>Bienvenido a M3U Player</h1>
         <p>Elige una lista M3U para empezar a ver tus canales favoritos.</p>
 
