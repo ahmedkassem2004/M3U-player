@@ -81,6 +81,8 @@
             max-width: 1000px;
             border-radius: 10px;
             background: black;
+            position: relative;
+            z-index: 2;
         }
 
         /* Animación de interferencia */
@@ -90,10 +92,18 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: url('static-tv.gif') center center no-repeat;
-            background-size: cover;
+            background: black;
+            display: flex;
+            justify-content: center;
+            align-items: center;
             opacity: 0;
             transition: opacity 0.4s ease-in-out;
+            z-index: 5;
+        }
+        .interference img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
         }
 
         /* Botón de carga de lista */
@@ -119,8 +129,13 @@
             <div id="channelList"></div>
         </div>
         <div class="content">
-            <div class="interference" id="interference"></div>
             <video id="videoPlayer" controls></video>
+
+            <!-- GIF de interferencia -->
+            <div class="interference" id="interference">
+                <img src="static-tv.gif" alt="Interferencia">
+            </div>
+
             <button class="load-btn" onclick="loadM3U()">Cargar Lista</button>
         </div>
     </div>
@@ -186,26 +201,28 @@
             const videoPlayer = document.getElementById('videoPlayer');
             const interference = document.getElementById('interference');
 
-            // Mostrar interferencia por 0.4 segundos
-            interference.style.opacity = 1;
+            // Mostrar GIF de interferencia por 0.7 segundos
+            interference.style.opacity = "1";
             setTimeout(() => {
-                interference.style.opacity = 0;
-            }, 400);
+                interference.style.opacity = "0";
+            }, 700);
 
             // Resaltar canal seleccionado
             document.querySelectorAll('.channel').forEach(channel => channel.classList.remove('playing'));
             selectedChannel.classList.add('playing');
 
-            if (url.includes('.m3u8')) {
-                if (Hls.isSupported()) {
-                    let hls = new Hls();
-                    hls.loadSource(url);
-                    hls.attachMedia(videoPlayer);
-                } else {
-                    videoPlayer.src = url;
+            setTimeout(() => {
+                if (url.includes('.m3u8')) {
+                    if (Hls.isSupported()) {
+                        let hls = new Hls();
+                        hls.loadSource(url);
+                        hls.attachMedia(videoPlayer);
+                    } else {
+                        videoPlayer.src = url;
+                    }
+                    videoPlayer.play();
                 }
-                videoPlayer.play();
-            }
+            }, 700); // Esperar que termine la interferencia antes de reproducir el canal
         }
 
         document.addEventListener("DOMContentLoaded", () => {
