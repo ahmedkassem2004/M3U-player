@@ -47,15 +47,6 @@
             border: 1px solid #003366;
             justify-content: space-between;
         }
-        .channel.playing {
-            background: #003366;
-            color: white;
-            font-weight: bold;
-        }
-        .channel:hover {
-            background: #0055A4;
-            color: white;
-        }
         .channel img {
             width: 40px;
             height: 40px;
@@ -63,13 +54,11 @@
             border-radius: 5px;
             object-fit: cover;
         }
-        .favorite {
-            cursor: pointer;
-            font-size: 20px;
-            color: #ccc;
-        }
-        .favorite.active {
-            color: gold;
+        /* Canal seleccionado en verde */
+        .channel.playing {
+            background: #008000 !important;
+            color: white;
+            font-weight: bold;
         }
         .content {
             flex: 1;
@@ -87,6 +76,17 @@
             border-radius: 10px;
             border: 3px solid #003366;
             background: black;
+        }
+        .interference {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('static-tv.gif') center center no-repeat;
+            background-size: cover;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
         }
         .channel-info {
             margin-top: 10px;
@@ -112,10 +112,10 @@
     <div class="container">
         <div class="sidebar">
             <input type="text" id="searchBar" class="search-bar" placeholder="Buscar canal..." oninput="filterChannels()">
-            <button onclick="toggleFavorites()">Ver Favoritos</button>
             <div id="channelList"></div>
         </div>
         <div class="content">
+            <div class="interference" id="interference"></div>
             <video id="videoPlayer" controls></video>
             <div class="channel-info" id="channelInfo">
                 <img id="channelLogo" src="" alt="Logo del canal">
@@ -127,8 +127,6 @@
 
     <script>
         let channelData = [];
-        let favorites = JSON.parse(localStorage.getItem('favorites')) || [];
-        let showingFavorites = false;
         let defaultM3U = "https://iptv-org.github.io/iptv/index.m3u";
 
         function loadM3U(url = null) {
@@ -165,11 +163,7 @@
             const channelList = document.getElementById('channelList');
             channelList.innerHTML = '';
 
-            const filteredChannels = showingFavorites
-                ? channelData.filter(channel => favorites.includes(channel.name))
-                : channelData;
-
-            filteredChannels.forEach(channel => {
+            channelData.forEach(channel => {
                 const channelDiv = document.createElement('div');
                 channelDiv.className = 'channel';
                 channelDiv.innerHTML = `
@@ -177,26 +171,10 @@
                         <img src="${channel.logo}" alt="Logo">
                         <span>${channel.name}</span>
                     </div>
-                    <span class="favorite ${favorites.includes(channel.name) ? 'active' : ''}" onclick="toggleFavorite('${channel.name}')">⭐</span>
                 `;
-                channelDiv.onclick = () => playChannel(channel);
+                channelDiv.onclick = () => playChannel(channel, channelDiv);
                 channelList.appendChild(channelDiv);
             });
-        }
-
-        function toggleFavorites() {
-            showingFavorites = !showingFavorites;
-            displayChannels();
-        }
-
-        function toggleFavorite(channelName) {
-            if (favorites.includes(channelName)) {
-                favorites = favorites.filter(name => name !== channelName);
-            } else {
-                favorites.push(channelName);
-            }
-            localStorage.setItem('favorites', JSON.stringify(favorites));
-            displayChannels();
         }
 
         function filterChannels() {
@@ -206,8 +184,20 @@
             });
         }
 
-        function playChannel(channel) {
+        function playChannel(channel, selectedChannel) {
             const videoPlayer = document.getElementById('videoPlayer');
+            const interference = document.getElementById('interference');
+
+            // Mostrar animación de interferencia
+            interference.style.opacity = 1;
+            setTimeout(() => {
+                interference.style.opacity = 0;
+            }, 500);
+
+            // Resaltar canal seleccionado en verde
+            document.querySelectorAll('.channel').forEach(c => c.classList.remove('playing'));
+            selectedChannel.classList.add('playing');
+
             document.getElementById('channelName').innerText = channel.name;
             document.getElementById('channelLogo').src = channel.logo;
             document.getElementById('channelDetails').innerText = `Canal: ${channel.name}`;
