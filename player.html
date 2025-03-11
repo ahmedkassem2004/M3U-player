@@ -3,146 +3,135 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>M3U Player - Estilo DirecTV</title>
+    <title>M3U-player</title>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <style>
-        /* Estilo general */
         body {
             font-family: Arial, sans-serif;
-            background-color: white;
-            color: #003366;
+            background-color: #121212;
+            color: white;
             margin: 0;
             padding: 0;
-            overflow: hidden;
         }
         .container {
             display: flex;
             height: 100vh;
-            background: white;
         }
-
-        /* Sidebar estilo DirecTV */
         .sidebar {
-            width: 300px;
-            background: #f0f0f0;
+            width: 250px;
+            background: rgba(30, 30, 30, 0.9);
             padding: 10px;
             overflow-y: auto;
-            border-right: 3px solid #003366;
+            border-radius: 10px;
         }
-        .search-bar {
-            width: 100%;
-            padding: 10px;
-            margin-bottom: 10px;
-            border-radius: 5px;
-            border: 1px solid #003366;
-            background: white;
-            color: #003366;
-        }
-        .channel {
-            padding: 12px;
-            background: white;
-            margin: 5px 0;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            border-radius: 5px;
-            transition: 0.3s;
-            color: #003366;
-            border: 1px solid #003366;
-        }
-        .channel.playing {
-            background: #003366;
-            color: white;
-            font-weight: bold;
-        }
-        .channel:hover {
-            background: #0055A4;
-            color: white;
-        }
-        .channel img {
-            width: 40px;
-            height: 40px;
-            margin-right: 10px;
-            border-radius: 5px;
-            object-fit: cover;
-        }
-
-        /* Estilo del reproductor */
         .content {
             flex: 1;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 20px;
-            background: white;
-            position: relative;
         }
-        video {
-            width: 90%;
-            max-width: 1000px;
-            border-radius: 10px;
-            border: 3px solid #003366;
-            background: black;
-        }
-
-        /* Animación de interferencia */
-        .interference {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: black;
+        .channel {
+            padding: 10px;
+            background: #444;
+            margin: 5px 0;
+            cursor: pointer;
             display: flex;
-            justify-content: center;
             align-items: center;
-            opacity: 0;
-            transition: opacity 0.4s ease-in-out;
+            border-radius: 5px;
+            transition: 0.3s;
         }
-        .interference img {
-            width: 100%;
-            height: 100%;
+        .channel:hover {
+            background: #666;
+        }
+        .channel img {
+            width: 30px;
+            height: 30px;
+            margin-right: 10px;
+            border-radius: 5px;
             object-fit: cover;
         }
-
-        /* Botón de carga de lista */
-        .load-btn {
-            margin-top: 15px;
-            padding: 12px 18px;
-            font-size: 16px;
-            border-radius: 5px;
-            background: #003366;
+        .playing {
+            background-color: green !important;
             color: white;
-            border: none;
-            cursor: pointer;
         }
-        .load-btn:hover {
-            background: #0055A4;
+        video {
+            width: 80%;
+            max-width: 800px;
+            border-radius: 10px;
+        }
+        /* Estilo del EPG */
+        .epg {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 5px;
+            text-align: center;
+            width: 80%;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="sidebar">
+        <div class="sidebar" id="sidebar">
             <input type="text" id="searchBar" class="search-bar" placeholder="Buscar canal..." oninput="filterChannels()">
             <div id="channelList"></div>
         </div>
         <div class="content">
             <video id="videoPlayer" controls></video>
-
-            <!-- GIF de interferencia -->
-            <div class="interference" id="interference">
-                <img src="static-tv.gif" alt="Interferencia">
-            </div>
-
-            <button class="load-btn" onclick="loadM3U()">Cargar Lista</button>
+            <div class="epg" id="epgInfo">Cargando EPG...</div>
         </div>
     </div>
-
     <script>
         let channelData = [];
+        let epgData = {};
         let defaultM3U = "https://iptv-org.github.io/iptv/index.m3u";
+        let epgURL = "https://iptv-org.github.io/epg/guides/es.xml"; // URL del EPG en español
+
+        function loadEPG() {
+            fetch(epgURL)
+                .then(response => response.text())
+                .then(data => {
+                    let parser = new DOMParser();
+                    let xml = parser.parseFromString(data, "text/xml");
+                    let programs = xml.getElementsByTagName("programme");
+
+                    for (let i = 0; i < programs.length; i++) {
+                        let channelId = programs[i].getAttribute("channel");
+                        let title = programs[i].getElementsByTagName("title")[0].textContent;
+                        let startTime = programs[i].getAttribute("start");
+                        let stopTime = programs[i].getAttribute("stop");
+
+                        if (!epgData[channelId]) {
+                            epgData[channelId] = [];
+                        }
+
+                        epgData[channelId].push({ title, startTime, stopTime });
+                    }
+                })
+                .catch(error => console.error("Error cargando el EPG:", error));
+        }
+
+        function showEPG(channelId) {
+            let epgInfo = document.getElementById("epgInfo");
+            let now = new Date();
+
+            if (epgData[channelId]) {
+                let currentProgram = epgData[channelId].find(program => {
+                    let start = new Date(program.startTime);
+                    let stop = new Date(program.stopTime);
+                    return now >= start && now <= stop;
+                });
+
+                if (currentProgram) {
+                    epgInfo.innerHTML = `En vivo: <b>${currentProgram.title}</b>`;
+                } else {
+                    epgInfo.innerHTML = "No hay información de programación disponible.";
+                }
+            } else {
+                epgInfo.innerHTML = "No hay información de programación disponible.";
+            }
+        }
 
         function loadM3U(url = null) {
             url = url || defaultM3U;
@@ -157,17 +146,21 @@
         function parseM3U(content) {
             channelData = [];
             const lines = content.split('\n');
-            let lastTitle = '', lastLogo = '';
+            let lastTitle = '';
+            let lastLogo = '';
+            let lastId = '';
 
             lines.forEach(line => {
                 line = line.trim();
                 if (line.startsWith('#EXTINF')) {
                     const matchTitle = line.match(/,(.+)/);
                     const matchLogo = line.match(/tvg-logo="([^"]+)"/);
+                    const matchId = line.match(/tvg-id="([^"]+)"/);
                     lastTitle = matchTitle ? matchTitle[1] : 'Canal desconocido';
-                    lastLogo = matchLogo ? matchLogo[1] : 'https://via.placeholder.com/40';
+                    lastLogo = matchLogo ? matchLogo[1] : 'https://via.placeholder.com/30';
+                    lastId = matchId ? matchId[1] : null;
                 } else if (line.startsWith('http')) {
-                    channelData.push({ name: lastTitle, url: line, logo: lastLogo });
+                    channelData.push({ name: lastTitle, url: line, logo: lastLogo, id: lastId });
                 }
             });
 
@@ -181,8 +174,9 @@
             channelData.forEach(channel => {
                 const channelDiv = document.createElement('div');
                 channelDiv.className = 'channel';
+                channelDiv.setAttribute('data-name', channel.name.toLowerCase());
                 channelDiv.innerHTML = `<img src="${channel.logo}" alt="Logo"><span>${channel.name}</span>`;
-                channelDiv.onclick = () => playChannel(channel.url, channelDiv);
+                channelDiv.onclick = () => playChannel(channel.url, channelDiv, channel.id);
                 channelList.appendChild(channelDiv);
             });
         }
@@ -192,42 +186,40 @@
             const channels = document.querySelectorAll('.channel');
 
             channels.forEach(channel => {
-                const channelName = channel.textContent.toLowerCase();
-                channel.style.display = channelName.includes(searchInput) ? 'flex' : 'none';
+                const channelName = channel.getAttribute('data-name');
+                if (channelName.includes(searchInput)) {
+                    channel.style.display = 'flex';
+                } else {
+                    channel.style.display = 'none';
+                }
             });
         }
 
-        function playChannel(url, selectedChannel) {
+        function playChannel(url, selectedChannel, channelId) {
             const videoPlayer = document.getElementById('videoPlayer');
-            const interference = document.getElementById('interference');
 
-            // Mostrar GIF de interferencia por 0.7 segundos
-            interference.style.opacity = "1";
-            setTimeout(() => {
-                interference.style.opacity = "0";
-            }, 700);
-
-            // Resaltar canal seleccionado
-            document.querySelectorAll('.channel').forEach(channel => channel.classList.remove('playing'));
+            document.querySelectorAll('.channel').forEach(channel => {
+                channel.classList.remove('playing');
+            });
             selectedChannel.classList.add('playing');
 
-            setTimeout(() => {
-                if (url.includes('.m3u8')) {
-                    if (Hls.isSupported()) {
-                        let hls = new Hls();
-                        hls.loadSource(url);
-                        hls.attachMedia(videoPlayer);
-                    } else {
-                        videoPlayer.src = url;
-                    }
-                    videoPlayer.play();
+            showEPG(channelId);
+
+            if (url.includes('.m3u8')) {
+                if (Hls.isSupported()) {
+                    let hls = new Hls();
+                    hls.loadSource(url);
+                    hls.attachMedia(videoPlayer);
+                } else {
+                    videoPlayer.src = url;
                 }
-            }, 700); // Esperar que termine la interferencia antes de reproducir el canal
+                videoPlayer.play();
+            }
         }
 
         document.addEventListener("DOMContentLoaded", () => {
             loadM3U();
+            loadEPG();
         });
     </script>
 </body>
-</html>
