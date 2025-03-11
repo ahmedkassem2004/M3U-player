@@ -3,26 +3,73 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>M3U-player</title>
+    <title>M3U Player</title>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
-            background-color: #121212;
-            color: white;
+            background-color: white;
+            color: #003366;
             margin: 0;
             padding: 0;
+            overflow: hidden;
         }
         .container {
             display: flex;
             height: 100vh;
         }
         .sidebar {
-            width: 250px;
-            background: rgba(30, 30, 30, 0.9);
+            width: 300px;
+            background: #f0f0f0;
             padding: 10px;
             overflow-y: auto;
-            border-radius: 10px;
+            border-right: 3px solid #003366;
+        }
+        .search-bar {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            border: 1px solid #003366;
+            background: white;
+            color: #003366;
+        }
+        .channel {
+            padding: 12px;
+            background: white;
+            margin: 5px 0;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            border-radius: 5px;
+            transition: 0.3s;
+            color: #003366;
+            border: 1px solid #003366;
+            justify-content: space-between;
+        }
+        .channel.playing {
+            background: #003366;
+            color: white;
+            font-weight: bold;
+        }
+        .channel:hover {
+            background: #0055A4;
+            color: white;
+        }
+        .channel img {
+            width: 40px;
+            height: 40px;
+            margin-right: 10px;
+            border-radius: 5px;
+            object-fit: cover;
+        }
+        .favorite {
+            cursor: pointer;
+            font-size: 20px;
+            color: #ccc;
+        }
+        .favorite.active {
+            color: gold;
         }
         .content {
             flex: 1;
@@ -30,108 +77,59 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-        }
-        .channel {
-            padding: 10px;
-            background: #444;
-            margin: 5px 0;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            border-radius: 5px;
-            transition: 0.3s;
-        }
-        .channel:hover {
-            background: #666;
-        }
-        .channel img {
-            width: 30px;
-            height: 30px;
-            margin-right: 10px;
-            border-radius: 5px;
-            object-fit: cover;
-        }
-        .playing {
-            background-color: green !important;
-            color: white;
+            padding: 20px;
+            background: white;
+            position: relative;
         }
         video {
-            width: 80%;
-            max-width: 800px;
+            width: 90%;
+            max-width: 1000px;
             border-radius: 10px;
+            border: 3px solid #003366;
+            background: black;
         }
-        /* Estilo del EPG */
-        .epg {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 10px;
+        .channel-info {
             margin-top: 10px;
-            border-radius: 5px;
+            padding: 15px;
+            background: #f0f0f0;
+            width: 90%;
+            max-width: 1000px;
             text-align: center;
-            width: 80%;
+            border-radius: 10px;
+            border: 2px solid #003366;
+            font-size: 16px;
+            color: #003366;
+        }
+        .channel-info img {
+            width: 60px;
+            height: 60px;
+            border-radius: 5px;
+            margin-bottom: 5px;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="sidebar" id="sidebar">
+        <div class="sidebar">
             <input type="text" id="searchBar" class="search-bar" placeholder="Buscar canal..." oninput="filterChannels()">
+            <button onclick="toggleFavorites()">Ver Favoritos</button>
             <div id="channelList"></div>
         </div>
         <div class="content">
             <video id="videoPlayer" controls></video>
-            <div class="epg" id="epgInfo">Cargando EPG...</div>
+            <div class="channel-info" id="channelInfo">
+                <img id="channelLogo" src="" alt="Logo del canal">
+                <p id="channelName">Selecciona un canal</p>
+                <p id="channelDetails"></p>
+            </div>
         </div>
     </div>
+
     <script>
         let channelData = [];
-        let epgData = {};
+        let favorites = JSON.parse(localStorage.getItem('favorites')) || [];
+        let showingFavorites = false;
         let defaultM3U = "https://iptv-org.github.io/iptv/index.m3u";
-        let epgURL = "https://iptv-org.github.io/epg/guides/es.xml"; // URL del EPG en español
-
-        function loadEPG() {
-            fetch(epgURL)
-                .then(response => response.text())
-                .then(data => {
-                    let parser = new DOMParser();
-                    let xml = parser.parseFromString(data, "text/xml");
-                    let programs = xml.getElementsByTagName("programme");
-
-                    for (let i = 0; i < programs.length; i++) {
-                        let channelId = programs[i].getAttribute("channel");
-                        let title = programs[i].getElementsByTagName("title")[0].textContent;
-                        let startTime = programs[i].getAttribute("start");
-                        let stopTime = programs[i].getAttribute("stop");
-
-                        if (!epgData[channelId]) {
-                            epgData[channelId] = [];
-                        }
-
-                        epgData[channelId].push({ title, startTime, stopTime });
-                    }
-                })
-                .catch(error => console.error("Error cargando el EPG:", error));
-        }
-
-        function showEPG(channelId) {
-            let epgInfo = document.getElementById("epgInfo");
-            let now = new Date();
-
-            if (epgData[channelId]) {
-                let currentProgram = epgData[channelId].find(program => {
-                    let start = new Date(program.startTime);
-                    let stop = new Date(program.stopTime);
-                    return now >= start && now <= stop;
-                });
-
-                if (currentProgram) {
-                    epgInfo.innerHTML = `En vivo: <b>${currentProgram.title}</b>`;
-                } else {
-                    epgInfo.innerHTML = "No hay información de programación disponible.";
-                }
-            } else {
-                epgInfo.innerHTML = "No hay información de programación disponible.";
-            }
-        }
 
         function loadM3U(url = null) {
             url = url || defaultM3U;
@@ -146,21 +144,17 @@
         function parseM3U(content) {
             channelData = [];
             const lines = content.split('\n');
-            let lastTitle = '';
-            let lastLogo = '';
-            let lastId = '';
+            let lastTitle = '', lastLogo = '';
 
             lines.forEach(line => {
                 line = line.trim();
                 if (line.startsWith('#EXTINF')) {
                     const matchTitle = line.match(/,(.+)/);
                     const matchLogo = line.match(/tvg-logo="([^"]+)"/);
-                    const matchId = line.match(/tvg-id="([^"]+)"/);
                     lastTitle = matchTitle ? matchTitle[1] : 'Canal desconocido';
-                    lastLogo = matchLogo ? matchLogo[1] : 'https://via.placeholder.com/30';
-                    lastId = matchId ? matchId[1] : null;
+                    lastLogo = matchLogo ? matchLogo[1] : 'https://via.placeholder.com/40';
                 } else if (line.startsWith('http')) {
-                    channelData.push({ name: lastTitle, url: line, logo: lastLogo, id: lastId });
+                    channelData.push({ name: lastTitle, url: line, logo: lastLogo });
                 }
             });
 
@@ -171,55 +165,66 @@
             const channelList = document.getElementById('channelList');
             channelList.innerHTML = '';
 
-            channelData.forEach(channel => {
+            const filteredChannels = showingFavorites
+                ? channelData.filter(channel => favorites.includes(channel.name))
+                : channelData;
+
+            filteredChannels.forEach(channel => {
                 const channelDiv = document.createElement('div');
                 channelDiv.className = 'channel';
-                channelDiv.setAttribute('data-name', channel.name.toLowerCase());
-                channelDiv.innerHTML = `<img src="${channel.logo}" alt="Logo"><span>${channel.name}</span>`;
-                channelDiv.onclick = () => playChannel(channel.url, channelDiv, channel.id);
+                channelDiv.innerHTML = `
+                    <div style="display: flex; align-items: center;">
+                        <img src="${channel.logo}" alt="Logo">
+                        <span>${channel.name}</span>
+                    </div>
+                    <span class="favorite ${favorites.includes(channel.name) ? 'active' : ''}" onclick="toggleFavorite('${channel.name}')">⭐</span>
+                `;
+                channelDiv.onclick = () => playChannel(channel);
                 channelList.appendChild(channelDiv);
             });
         }
 
+        function toggleFavorites() {
+            showingFavorites = !showingFavorites;
+            displayChannels();
+        }
+
+        function toggleFavorite(channelName) {
+            if (favorites.includes(channelName)) {
+                favorites = favorites.filter(name => name !== channelName);
+            } else {
+                favorites.push(channelName);
+            }
+            localStorage.setItem('favorites', JSON.stringify(favorites));
+            displayChannels();
+        }
+
         function filterChannels() {
             const searchInput = document.getElementById('searchBar').value.toLowerCase();
-            const channels = document.querySelectorAll('.channel');
-
-            channels.forEach(channel => {
-                const channelName = channel.getAttribute('data-name');
-                if (channelName.includes(searchInput)) {
-                    channel.style.display = 'flex';
-                } else {
-                    channel.style.display = 'none';
-                }
+            document.querySelectorAll('.channel').forEach(channel => {
+                channel.style.display = channel.textContent.toLowerCase().includes(searchInput) ? 'flex' : 'none';
             });
         }
 
-        function playChannel(url, selectedChannel, channelId) {
+        function playChannel(channel) {
             const videoPlayer = document.getElementById('videoPlayer');
+            document.getElementById('channelName').innerText = channel.name;
+            document.getElementById('channelLogo').src = channel.logo;
+            document.getElementById('channelDetails').innerText = `Canal: ${channel.name}`;
 
-            document.querySelectorAll('.channel').forEach(channel => {
-                channel.classList.remove('playing');
-            });
-            selectedChannel.classList.add('playing');
-
-            showEPG(channelId);
-
-            if (url.includes('.m3u8')) {
-                if (Hls.isSupported()) {
-                    let hls = new Hls();
-                    hls.loadSource(url);
-                    hls.attachMedia(videoPlayer);
-                } else {
-                    videoPlayer.src = url;
-                }
-                videoPlayer.play();
+            if (Hls.isSupported()) {
+                let hls = new Hls();
+                hls.loadSource(channel.url);
+                hls.attachMedia(videoPlayer);
+            } else {
+                videoPlayer.src = channel.url;
             }
+            videoPlayer.play();
         }
 
         document.addEventListener("DOMContentLoaded", () => {
             loadM3U();
-            loadEPG();
         });
     </script>
 </body>
+</html>
