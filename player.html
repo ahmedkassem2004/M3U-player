@@ -54,7 +54,6 @@
             border-radius: 5px;
             object-fit: cover;
         }
-        /* Canal seleccionado en verde */
         .channel.playing {
             background: #008000 !important;
             color: white;
@@ -70,16 +69,32 @@
             background: white;
             position: relative;
         }
-        video {
+        
+        /* 📺 Marco del televisor retro */
+        .tv-frame {
             width: 90%;
-            max-width: 1000px;
+            max-width: 1100px;
+            background: #4a4a4a;
+            padding: 20px;
+            border-radius: 30px;
+            border: 10px solid #333;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5), 0 10px 20px rgba(0, 0, 0, 0.3);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .tv-screen {
+            width: 100%;
             border-radius: 10px;
-            border: 3px solid #003366;
+            border: 3px solid black;
             background: black;
             position: relative;
             z-index: 2;
         }
-        /* Interferencia sobre el reproductor */
+
+        /* 📡 Interferencia sobre el reproductor */
         .interference {
             position: absolute;
             top: 50%;
@@ -123,15 +138,16 @@
 <body>
     <div class="container">
         <div class="sidebar">
-            <input type="text" id="searchBar" class="search-bar" placeholder="Buscar canal..." oninput="filterChannels()">
+            <input type="text" id="searchBar" class="search-bar" placeholder="Buscar por nombre o número..." oninput="filterChannels()">
             <div id="channelList"></div>
         </div>
         <div class="content">
-            <!-- Interferencia sobre el reproductor -->
-            <div class="interference" id="interference">
-                <img src="static-tv.gif" alt="Interferencia">
+            <div class="tv-frame">
+                <div class="interference" id="interference">
+                    <img src="static-tv.gif" alt="Interferencia">
+                </div>
+                <video id="videoPlayer" controls class="tv-screen"></video>
             </div>
-            <video id="videoPlayer" controls></video>
             <div class="channel-info" id="channelInfo">
                 <img id="channelLogo" src="" alt="Logo del canal">
                 <p id="channelName">Selecciona un canal</p>
@@ -158,6 +174,7 @@
             channelData = [];
             const lines = content.split('\n');
             let lastTitle = '', lastLogo = '';
+            let channelNumber = 1;
 
             lines.forEach(line => {
                 line = line.trim();
@@ -167,7 +184,7 @@
                     lastTitle = matchTitle ? matchTitle[1] : 'Canal desconocido';
                     lastLogo = matchLogo ? matchLogo[1] : 'https://via.placeholder.com/40';
                 } else if (line.startsWith('http')) {
-                    channelData.push({ name: lastTitle, url: line, logo: lastLogo });
+                    channelData.push({ number: channelNumber++, name: lastTitle, url: line, logo: lastLogo });
                 }
             });
 
@@ -181,13 +198,9 @@
             channelData.forEach(channel => {
                 const channelDiv = document.createElement('div');
                 channelDiv.className = 'channel';
-                channelDiv.innerHTML = `
-                    <div style="display: flex; align-items: center;">
-                        <img src="${channel.logo}" alt="Logo">
-                        <span>${channel.name}</span>
-                    </div>
-                `;
+                channelDiv.dataset.number = channel.number;
                 channelDiv.onclick = () => playChannel(channel, channelDiv);
+                channelDiv.innerHTML = `<span>${channel.number}</span> <img src="${channel.logo}" alt="Logo"> <span>${channel.name}</span>`;
                 channelList.appendChild(channelDiv);
             });
         }
@@ -195,7 +208,9 @@
         function filterChannels() {
             const searchInput = document.getElementById('searchBar').value.toLowerCase();
             document.querySelectorAll('.channel').forEach(channel => {
-                channel.style.display = channel.textContent.toLowerCase().includes(searchInput) ? 'flex' : 'none';
+                const nameMatch = channel.textContent.toLowerCase().includes(searchInput);
+                const numberMatch = channel.dataset.number.includes(searchInput);
+                channel.style.display = nameMatch || numberMatch ? 'flex' : 'none';
             });
         }
 
@@ -203,19 +218,17 @@
             const videoPlayer = document.getElementById('videoPlayer');
             const interference = document.getElementById('interference');
 
-            // Mostrar interferencia sobre el reproductor
+            // Animación de interferencia
             interference.style.opacity = 1;
             setTimeout(() => {
                 interference.style.opacity = 0;
             }, 400);
 
-            // Resaltar canal seleccionado en verde
             document.querySelectorAll('.channel').forEach(c => c.classList.remove('playing'));
             selectedChannel.classList.add('playing');
 
             document.getElementById('channelName').innerText = channel.name;
             document.getElementById('channelLogo').src = channel.logo;
-            document.getElementById('channelDetails').innerText = `Canal: ${channel.name}`;
 
             if (Hls.isSupported()) {
                 let hls = new Hls();
@@ -233,3 +246,4 @@
     </script>
 </body>
 </html>
+           
