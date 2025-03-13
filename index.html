@@ -5,10 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bienvenido a M3U Player</title>
     <style>
+        @font-face {
+            font-family: "TahomaXP";
+            src: local("Tahoma"), url('https://fonts.cdnfonts.com/s/84760/Tahoma.woff') format('woff');
+        }
+
         body {
-            font-family: Arial, sans-serif;
-            background-color: white;
-            color: #003366;
+            font-family: "TahomaXP", sans-serif;
+            background: url('https://wallpapercave.com/wp/wp3980724.jpg') no-repeat center center fixed;
+            background-size: cover;
+            color: white;
             text-align: center;
             margin: 0;
             padding: 0;
@@ -18,46 +24,80 @@
             height: 100vh;
             flex-direction: column;
         }
-        .welcome-container {
-            max-width: 500px;
-            padding: 20px;
-            background: rgba(30, 30, 30, 0.1);
-            border-radius: 10px;
+
+        .login-container {
+            background: linear-gradient(to bottom, #1c5a85, #2a78c3);
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 5px 5px 15px rgba(0, 0, 0, 0.4);
+            width: 320px;
+            text-align: center;
         }
-        img {
-            width: 150px;
-            margin-bottom: 20px;
+
+        .login-container img {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: white;
+            padding: 5px;
         }
-        .popup input, .popup button {
-            display: block;
-            width: 100%;
+
+        .login-container h1 {
+            font-size: 22px;
             margin: 10px 0;
+            font-weight: bold;
+            color: white;
+        }
+
+        .input-box {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 2px solid #0055A4;
+            border-radius: 5px;
+            font-size: 16px;
+            text-align: center;
+        }
+
+        .btn {
+            width: 100%;
             padding: 10px;
             font-size: 16px;
-        }
-        .popup button {
-            background: #003366;
-            color: white;
             border: none;
             cursor: pointer;
             border-radius: 5px;
+            margin: 5px 0;
+            font-weight: bold;
         }
-        .popup button:hover {
-            background: #0055A4;
+
+        .btn-primary {
+            background: #0066cc;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #004a99;
+        }
+
+        .btn-secondary {
+            background: #cccccc;
+            color: black;
+        }
+
+        .btn-secondary:hover {
+            background: #aaaaaa;
         }
     </style>
 </head>
 <body>
-    <div class="welcome-container">
-        <img src="logo.webp" alt="M3U Player Logo">
-        <h1>Bienvenido a M3U Player</h1>
-        <p>Elige una lista M3U para empezar a ver tus canales favoritos.</p>
+    <div class="login-container">
+        <img src="https://upload.wikimedia.org/wikipedia/en/thumb/f/f5/Windows_XP_Luna.svg/800px-Windows_XP_Luna.svg.png" alt="Usuario XP">
+        <h1>Bienvenido</h1>
 
-        <div class="popup">
-            <input type="text" id="urlInput" placeholder="Ingrese URL M3U">
-            <button onclick="addM3UList()">Agregar Lista</button>
-            <button onclick="goToPlayer()">Usar Lista Guardada</button>
-        </div>
+        <input type="text" id="urlInput" class="input-box" placeholder="Ingrese URL M3U">
+        
+        <button class="btn btn-primary" onclick="addM3UList()">Agregar Lista</button>
+        <button class="btn btn-secondary" onclick="goToPlayer()">Usar Lista Guardada</button>
     </div>
 
     <script>
