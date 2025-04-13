@@ -4,7 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>M3U Player</title>
+
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#003366" />
+  <link rel="icon" href="icon-192.png" sizes="192x192"/>
+
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -55,7 +61,7 @@
       object-fit: cover;
     }
     .channel.playing {
-      background: #008000;
+      background: #008000 !important;
       color: white;
       font-weight: bold;
     }
@@ -129,22 +135,30 @@
       margin-bottom: 5px;
     }
   </style>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('service-worker.js')
+        .then(reg => console.log('Service Worker registrado:', reg.scope))
+        .catch(err => console.error('Error al registrar SW:', err));
+    }
+  </script>
 </head>
 <body>
   <div class="container">
     <div class="sidebar">
-      <input type="text" id="searchBar" class="search-bar" placeholder="Buscar por nombre o número..." oninput="filterChannels()"/>
+      <input type="text" id="searchBar" class="search-bar" placeholder="Buscar por nombre o número..." oninput="filterChannels()">
       <div id="channelList"></div>
     </div>
     <div class="content">
       <div class="tv-frame">
         <div class="interference" id="interference">
-          <img src="static-tv.gif" alt="Interferencia"/>
+          <img src="static-tv.gif" alt="Interferencia" />
         </div>
         <video id="videoPlayer" controls class="tv-screen"></video>
       </div>
       <div class="channel-info" id="channelInfo">
-        <img id="channelLogo" src="" alt="Logo del canal"/>
+        <img id="channelLogo" src="" alt="Logo del canal">
         <p id="channelName">Selecciona un canal</p>
         <p id="channelDetails"></p>
       </div>
@@ -153,14 +167,15 @@
 
   <script>
     let channelData = [];
-    let hlsInstance = null;
-    const defaultM3U = "https://iptv-org.github.io/iptv/index.m3u";
+    let defaultM3U = "https://iptv-org.github.io/iptv/index.m3u";
 
     function loadM3U(url = null) {
       url = url || defaultM3U;
       fetch(url)
         .then(response => response.text())
-        .then(data => parseM3U(data))
+        .then(data => {
+          parseM3U(data);
+        })
         .catch(error => console.error('Error cargando M3U:', error));
     }
 
@@ -188,7 +203,6 @@
     function displayChannels() {
       const channelList = document.getElementById('channelList');
       channelList.innerHTML = '';
-
       channelData.forEach(channel => {
         const channelDiv = document.createElement('div');
         channelDiv.className = 'channel';
@@ -212,7 +226,6 @@
       const videoPlayer = document.getElementById('videoPlayer');
       const interference = document.getElementById('interference');
 
-      // Interferencia visual
       interference.style.opacity = 1;
       setTimeout(() => {
         interference.style.opacity = 0;
@@ -224,20 +237,13 @@
       document.getElementById('channelName').innerText = channel.name;
       document.getElementById('channelLogo').src = channel.logo;
 
-      // Detener instancia previa
-      if (hlsInstance) {
-        hlsInstance.destroy();
-        hlsInstance = null;
-      }
-
       if (Hls.isSupported()) {
-        hlsInstance = new Hls();
-        hlsInstance.loadSource(channel.url);
-        hlsInstance.attachMedia(videoPlayer);
+        let hls = new Hls();
+        hls.loadSource(channel.url);
+        hls.attachMedia(videoPlayer);
       } else {
         videoPlayer.src = channel.url;
       }
-
       videoPlayer.play();
     }
 
