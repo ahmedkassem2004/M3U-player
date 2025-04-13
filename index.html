@@ -4,6 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bienvenido a M3U Player</title>
+
+    <!-- PWA -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#003366">
+    <link rel="icon" href="icon-192.png" sizes="192x192">
+
     <style>
         @font-face {
             font-family: "TahomaXP";
@@ -88,6 +94,14 @@
             background: #aaaaaa;
         }
     </style>
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('service-worker.js')
+                .then(reg => console.log('SW registrado:', reg.scope))
+                .catch(err => console.error('SW falló:', err));
+        }
+    </script>
 </head>
 <body>
     <div class="login-container">
@@ -95,7 +109,6 @@
         <h1>Bienvenido</h1>
 
         <input type="text" id="urlInput" class="input-box" placeholder="Ingrese URL M3U">
-        
         <button class="btn btn-primary" onclick="addM3UList()">Agregar Lista</button>
         <button class="btn btn-secondary" onclick="goToPlayer()">Usar Lista Guardada</button>
     </div>
