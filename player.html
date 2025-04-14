@@ -1,181 +1,127 @@
-<!DOCTYPE html>
-<html lang="es">
+<!DOCTYPE html><html lang="es">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>M3U Player</title>
-
-  <link rel="manifest" href="manifest.json" />
+  <title>M3U Player</title>  <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#003366" />
-  <link rel="icon" href="icon-192.png" sizes="192x192"/>
-
-  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-
-  <style>
+  <link rel="icon" href="icon-192.png" sizes="192x192"/>  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>  <style>
+    * {
+      box-sizing: border-box;
+    }
     body {
       font-family: Arial, sans-serif;
-      background-color: white;
-      color: #003366;
+      background-color: #0d1117;
+      color: #c9d1d9;
       margin: 0;
       padding: 0;
-      overflow: hidden;
-    }
-    .container {
-      display: flex;
       height: 100vh;
+      display: flex;
+      flex-direction: column;
     }
-    .sidebar {
-      width: 300px;
-      background: #f0f0f0;
-      padding: 10px;
-      overflow-y: auto;
-      border-right: 3px solid #003366;
+    header {
+      background: #161b22;
+      padding: 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    header h1 {
+      font-size: 18px;
+      color: #58a6ff;
+    }
+    .search-container {
+      flex: 1;
+      margin-left: 10px;
     }
     .search-bar {
       width: 100%;
-      padding: 10px;
-      margin-bottom: 10px;
+      padding: 8px;
       border-radius: 5px;
-      border: 1px solid #003366;
-      background: white;
-      color: #003366;
+      border: 1px solid #30363d;
+      background: #0d1117;
+      color: white;
+    }
+    .main {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+    .channel-list {
+      width: 280px;
+      background: #161b22;
+      overflow-y: auto;
+      border-right: 2px solid #30363d;
+      padding: 10px;
     }
     .channel {
-      padding: 12px;
-      background: white;
-      margin: 5px 0;
-      cursor: pointer;
       display: flex;
       align-items: center;
+      padding: 10px;
+      background: #0d1117;
       border-radius: 5px;
-      transition: 0.3s;
-      color: #003366;
-      border: 1px solid #003366;
-      justify-content: space-between;
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    .channel:hover {
+      background: #21262d;
     }
     .channel img {
-      width: 40px;
-      height: 40px;
+      width: 50px;
+      height: 30px;
       margin-right: 10px;
-      border-radius: 5px;
+      border-radius: 4px;
       object-fit: cover;
     }
-    .channel.playing {
-      background: #008000 !important;
-      color: white;
-      font-weight: bold;
+    .channel-info {
+      flex: 1;
     }
-    .content {
+    .channel-info p {
+      margin: 0;
+      font-size: 14px;
+    }
+    .player-container {
       flex: 1;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       padding: 20px;
-      background: white;
-      position: relative;
+      background: #0d1117;
     }
-    .tv-frame {
-      width: 90%;
-      max-width: 1100px;
-      background: #4a4a4a;
-      padding: 20px;
-      border-radius: 30px;
-      border: 10px solid #333;
-      box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5), 0 10px 20px rgba(0, 0, 0, 0.3);
-      position: relative;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    .tv-screen {
+    video {
       width: 100%;
+      max-width: 900px;
       border-radius: 10px;
-      border: 3px solid black;
+      border: 2px solid #30363d;
       background: black;
-      position: relative;
-      z-index: 2;
     }
-    .interference {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      width: 100%;
-      height: 100%;
-      background: black;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      opacity: 0;
-      transition: opacity 0.4s ease-in-out;
-      transform: translate(-50%, -50%);
-      z-index: 5;
-    }
-    .interference img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-    .channel-info {
-      margin-top: 10px;
-      padding: 15px;
-      background: #f0f0f0;
-      width: 90%;
-      max-width: 1000px;
-      text-align: center;
-      border-radius: 10px;
-      border: 2px solid #003366;
-      font-size: 16px;
-      color: #003366;
-    }
-    .channel-info img {
-      width: 60px;
-      height: 60px;
-      border-radius: 5px;
-      margin-bottom: 5px;
-    }
-  </style>
-
-  <script>
+  </style>  <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('service-worker.js')
         .then(reg => console.log('Service Worker registrado:', reg.scope))
         .catch(err => console.error('Error al registrar SW:', err));
     }
-  </script>
-</head>
+  </script></head>
 <body>
-  <div class="container">
-    <div class="sidebar">
-      <input type="text" id="searchBar" class="search-bar" placeholder="Buscar por nombre o número..." oninput="filterChannels()">
-      <div id="channelList"></div>
+  <header>
+    <h1>M3U Player</h1>
+    <div class="search-container">
+      <input type="text" id="searchBar" class="search-bar" placeholder="Buscar canal..." oninput="filterChannels()" />
     </div>
-    <div class="content">
-      <div class="tv-frame">
-        <div class="interference" id="interference">
-          <img src="static-tv.gif" alt="Interferencia" />
-        </div>
-        <video id="videoPlayer" controls class="tv-screen"></video>
-      </div>
-      <div class="channel-info" id="channelInfo">
-        <img id="channelLogo" src="" alt="Logo del canal">
-        <p id="channelName">Selecciona un canal</p>
-        <p id="channelDetails"></p>
-      </div>
+  </header>  <div class="main">
+    <div class="channel-list" id="channelList"></div>
+    <div class="player-container">
+      <video id="videoPlayer" controls autoplay></video>
     </div>
-  </div>
-
-  <script>
+  </div>  <script>
     let channelData = [];
-    let defaultM3U = "https://iptv-org.github.io/iptv/index.m3u";
+    let defaultM3U = localStorage.getItem('m3uURL') || "https://iptv-org.github.io/iptv/index.m3u";
 
-    function loadM3U(url = null) {
-      url = url || defaultM3U;
+    function loadM3U(url = defaultM3U) {
       fetch(url)
         .then(response => response.text())
-        .then(data => {
-          parseM3U(data);
-        })
+        .then(data => parseM3U(data))
         .catch(error => console.error('Error cargando M3U:', error));
     }
 
@@ -191,54 +137,39 @@
           const matchTitle = line.match(/,(.+)/);
           const matchLogo = line.match(/tvg-logo="([^"]+)"/);
           lastTitle = matchTitle ? matchTitle[1] : 'Canal desconocido';
-          lastLogo = matchLogo ? matchLogo[1] : 'https://via.placeholder.com/40';
+          lastLogo = matchLogo ? matchLogo[1] : 'https://via.placeholder.com/50';
         } else if (line.startsWith('http')) {
           channelData.push({ number: channelNumber++, name: lastTitle, url: line, logo: lastLogo });
         }
       });
-
       displayChannels();
     }
 
     function displayChannels() {
       const channelList = document.getElementById('channelList');
       channelList.innerHTML = '';
+
       channelData.forEach(channel => {
-        const channelDiv = document.createElement('div');
-        channelDiv.className = 'channel';
-        channelDiv.dataset.number = channel.number;
-        channelDiv.onclick = () => playChannel(channel, channelDiv);
-        channelDiv.innerHTML = `<span>${channel.number}</span> <img src="${channel.logo}" alt="Logo"> <span>${channel.name}</span>`;
-        channelList.appendChild(channelDiv);
+        const div = document.createElement('div');
+        div.className = 'channel';
+        div.onclick = () => playChannel(channel);
+        div.innerHTML = `<img src="${channel.logo}" alt="logo"><div class="channel-info"><p>${channel.number}. ${channel.name}</p></div>`;
+        channelList.appendChild(div);
       });
     }
 
     function filterChannels() {
-      const searchInput = document.getElementById('searchBar').value.toLowerCase();
+      const search = document.getElementById('searchBar').value.toLowerCase();
       document.querySelectorAll('.channel').forEach(channel => {
-        const nameMatch = channel.textContent.toLowerCase().includes(searchInput);
-        const numberMatch = channel.dataset.number.includes(searchInput);
-        channel.style.display = nameMatch || numberMatch ? 'flex' : 'none';
+        const match = channel.textContent.toLowerCase().includes(search);
+        channel.style.display = match ? 'flex' : 'none';
       });
     }
 
-    function playChannel(channel, selectedChannel) {
+    function playChannel(channel) {
       const videoPlayer = document.getElementById('videoPlayer');
-      const interference = document.getElementById('interference');
-
-      interference.style.opacity = 1;
-      setTimeout(() => {
-        interference.style.opacity = 0;
-      }, 400);
-
-      document.querySelectorAll('.channel').forEach(c => c.classList.remove('playing'));
-      selectedChannel.classList.add('playing');
-
-      document.getElementById('channelName').innerText = channel.name;
-      document.getElementById('channelLogo').src = channel.logo;
-
       if (Hls.isSupported()) {
-        let hls = new Hls();
+        const hls = new Hls();
         hls.loadSource(channel.url);
         hls.attachMedia(videoPlayer);
       } else {
@@ -247,9 +178,8 @@
       videoPlayer.play();
     }
 
-    document.addEventListener("DOMContentLoaded", () => {
+    document.addEventListener('DOMContentLoaded', () => {
       loadM3U();
     });
-  </script>
-</body>
+  </script></body>
 </html>
