@@ -44,7 +44,7 @@
     }
 
     header {
-      padding: 10px 20px;
+      padding: 12px 24px;
       background: #203a43;
       display: flex;
       justify-content: space-between;
@@ -58,66 +58,71 @@
     }
 
     input#searchBar {
-      padding: 8px 14px;
-      border-radius: 6px;
+      padding: 10px 16px;
+      border-radius: 25px;
       border: none;
-      width: 240px;
-      background: #3a4f4a;
-      color: #e0f7da;
+      width: 260px;
+      background: #e0e0e0;
+      color: #203a43;
       font-size: 15px;
       outline: none;
-      transition: 0.3s;
+      box-shadow: inset 2px 2px 5px #b3b3b3,
+                  inset -2px -2px 5px #ffffff;
     }
 
     input#searchBar:focus {
-      background: #4e665f;
-      box-shadow: 0 0 0 2px #a7ff83;
+      box-shadow: 0 0 8px #a7ff83;
+      background: #f0fff0;
     }
 
     .main {
       display: flex;
-      height: calc(100vh - 50px);
+      height: calc(100vh - 60px);
     }
 
     .channel-list {
-      width: 280px;
-      background: #1a2a26;
+      width: 300px;
+      background: rgba(255, 255, 255, 0.1);
       overflow-y: auto;
-      padding: 12px;
+      padding: 16px;
       border-right: 2px solid #2e3f3a;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.4);
     }
 
     .channel {
       padding: 10px;
-      background: #324d44;
-      margin-bottom: 8px;
-      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.07);
+      margin-bottom: 10px;
+      border-radius: 12px;
       cursor: pointer;
       display: flex;
       align-items: center;
       color: #c5e1c5;
       transition: background 0.3s, transform 0.2s;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
     }
 
     .channel:hover {
-      background: #a7ff83;
-      color: #1b2d2a;
-      transform: scale(1.02);
+      background: rgba(167, 255, 131, 0.3);
+      color: #203a43;
+      transform: scale(1.03);
     }
 
     .channel.selected {
       background: #a7ff83;
-      color: #1b2d2a;
+      color: #203a43;
       font-weight: bold;
+      transform: scale(1.05);
     }
 
     .channel img {
-      width: 50px;
-      height: 30px;
+      width: 60px;
+      height: 36px;
       margin-right: 12px;
       object-fit: cover;
-      border-radius: 5px;
+      border-radius: 6px;
       background: white;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
     }
 
     .player-container {
@@ -126,13 +131,16 @@
       display: flex;
       justify-content: center;
       align-items: center;
+      padding: 20px;
     }
 
     video {
       width: 100%;
       height: 100%;
       background: black;
-      border: none;
+      border: 3px solid #a7ff83;
+      border-radius: 20px;
+      box-shadow: 0 8px 20px rgba(167, 255, 131, 0.7);
     }
   </style>
 </head>
@@ -199,7 +207,7 @@
     channels.forEach(channel => {
       const div = document.createElement("div");
       div.className = "channel";
-      div.innerHTML = `<img src="${channel.logo || 'https://via.placeholder.com/50x30?text=TV'}"><span>${channel.number}. ${channel.name}</span>`;
+      div.innerHTML = `<img src="${channel.logo || 'https://via.placeholder.com/60x36?text=TV'}"><span>${channel.number}. ${channel.name}</span>`;
       div.onclick = () => {
         clickSound.currentTime = 0;
         clickSound.play();
