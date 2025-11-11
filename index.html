@@ -1,356 +1,243 @@
 <!doctype html>
-<html lang="es">
+<html lang="es" class="h-full">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>IPTV</title>
+<meta name="theme-color" content="#0e1216"/>
+<title>IPTV Player PWA</title>
+
+<!-- TailwindCSS -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  darkMode: 'media',
+  theme: {
+    extend: {
+      colors: {
+        accent: '#00c86b',
+        panel: { light: '#f3f4f6', dark: '#161b22' },
+        bg: { light: '#ffffff', dark: '#0d1117' },
+        text: { light: '#111827', dark: '#e9eef1' }
+      },
+      borderRadius: { 'xl': '12px' }
+    }
+  }
+}
+</script>
+
+<!-- Manifest inline -->
+<link rel="manifest" href="data:application/json,{&quot;name&quot;:&quot;IPTV Player&quot;,&quot;short_name&quot;:&quot;IPTV&quot;,&quot;display&quot;:&quot;standalone&quot;,&quot;start_url&quot;:&quot;.&quot;,&quot;background_color&quot;:&quot;#0e1216&quot;,&quot;theme_color&quot;:&quot;#0e1216&quot;,&quot;icons&quot;:[{&quot;src&quot;:&quot;https://cdn-icons-png.flaticon.com/512/633/633600.png&quot;,&quot;sizes&quot;:&quot;512x512&quot;,&quot;type&quot;:&quot;image/png&quot;}]}"/>
+
+<!-- Service Worker -->
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', ()=> navigator.serviceWorker.register(URL.createObjectURL(new Blob([`
+    self.addEventListener('install', e=>self.skipWaiting());
+    self.addEventListener('fetch', e=>{
+      if (e.request.mode==='navigate')
+        e.respondWith(fetch(e.request).catch(()=>new Response('<h1>Sin conexión</h1>',{headers:{'Content-Type':'text/html'}})));
+    });
+  `],{type:'text/javascript'}))));
+}
+</script>
+
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-
-<style>
-  :root{
-    --bg:#101217;
-    --panel:#161c21;
-    --muted:#9ba7b2;
-    --accent:#00c86b;
-    --text-size:16px;
-  }
-  /* Adaptive font: base smaller for mobile, +10% for wide screens >=1200px */
-  html,body{height:100%;margin:0;background:var(--bg);color:#e9eef1;font-family:system-ui,Roboto,Arial,sans-serif;font-size:var(--text-size)}
-  @media (min-width:1200px){
-    :root{--text-size:17.6px} /* +10% */
-  }
-
-  *{box-sizing:border-box}
-  .app{display:grid;grid-template-columns:360px 1fr;gap:12px;height:100vh;padding:12px}
-
-  /* LEFT list */
-  .left{background:var(--panel);border-radius:10px;padding:12px;overflow:hidden;display:flex;flex-direction:column}
-  .header{display:flex;align-items:center;gap:10px;margin-bottom:8px}
-  .title{font-weight:600;font-size:1.05rem;color:#fff}
-  .search{margin-top:6px}
-  .search input{
-    width:100%;padding:9px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);
-    background:#0b0f12;color:var(--muted);outline:none;font-size:0.98rem;
-  }
-
-  .list{margin-top:10px;overflow:auto;flex:1;padding-right:6px}
-  /* MODIFICADO: Añadido flexbox para alinear el logo y el texto */
-  .chan{
-    padding:10px 12px;border-radius:8px;margin-bottom:8px;
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    cursor:pointer;background:transparent;border:1px solid transparent;transition:background .12s,transform .08s;
-  }
-  .chan:hover{background:rgba(255,255,255,0.02);transform:translateX(4px)}
-  .chan.sel{background:linear-gradient(90deg, rgba(0,200,120,0.07), rgba(0,200,120,0.03));border:1px solid rgba(0,200,120,0.14)}
-  
-  /* AÑADIDO: Contenedor para el logo y el nombre */
-  .chan-info {
-    display: flex;
-    align-items: center;
-    gap: 10px; /* Espacio entre el logo y el nombre */
-    overflow: hidden;
-    flex-grow: 1;
-    min-width: 0;
-  }
-
-  /* AÑADIDO: Estilo del Logo */
-  .logo {
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    overflow: hidden;
-    background: rgba(255,255,255,0.05); /* Fondo para iniciales/carga */
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.8rem;
-    color: var(--muted);
-    font-weight: 600;
-    flex-shrink: 0; /* Evita que se encoja */
-  }
-  .logo img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain; /* Ajuste para logos */
-    background: #fff; /* Fondo blanco si el logo es PNG transparente */
-  }
-
-  .cname{
-    overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
-    max-width:200px; /* Reducido para hacer espacio para el logo */
-    font-size:0.98rem;
-  }
-  .playbtn{font-size:0.92rem;padding:6px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);color:var(--muted);background:transparent}
-
-  /* RIGHT player */
-  .right{background:var(--panel);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:10px}
-  .now{display:flex;align-items:center;gap:12px}
-  .now .t{font-weight:600;font-size:1.05rem;color:#fff; text-align:left; width:100%}
-  .videoWrap{flex:1;position:relative;background:#000;border-radius:10px;overflow:hidden;display:flex;align-items:center;justify-content:center}
-  video{width:100%;height:100%;background:#000;outline:none;border-radius:6px}
-  .overlay{position:absolute;left:12px;right:12px;top:12px;padding:10px;border-radius:8px;background:rgba(0,0,0,0.68);color:#ffb3b3;font-size:0.98rem;display:none;z-index:5}
-  .spinner{position:absolute;right:12px;top:12px;padding:6px 10px;border-radius:8px;background:rgba(255,255,255,0.04);color:var(--muted);font-size:0.95rem;display:none}
-
-  /* responsive: stack on small screens */
-  @media (max-width:900px){
-    .app{grid-template-columns:1fr;grid-auto-rows:auto;height:100vh;padding:10px}
-    .left{order:2; height:40vh}
-    .right{order:1; height:auto}
-    .cname{max-width:60%}
-  }
-</style>
 </head>
-<body>
-<div class="app" role="application" aria-label="IPTV player">
-  <div class="left" aria-hidden="false">
-    <div class="header">
-      <div class="title">IPTV — Lista</div>
+
+<body class="h-full bg-bg-light dark:bg-bg-dark text-text-light dark:text-text-dark font-sans">
+<!-- Pantalla de carga -->
+<div id="loader" class="fixed inset-0 flex flex-col items-center justify-center bg-bg-light dark:bg-bg-dark z-50">
+  <div class="w-16 h-16 border-4 border-gray-300 dark:border-gray-700 border-t-accent rounded-full animate-spin"></div>
+  <p class="mt-4 text-gray-500 dark:text-gray-400 text-sm">Cargando IPTV Player...</p>
+</div>
+
+<!-- App -->
+<div class="grid md:grid-cols-[360px_1fr] gap-4 h-screen p-4 opacity-0 transition-opacity duration-700" id="app">
+  <!-- Panel izquierdo -->
+  <div class="flex flex-col bg-panel-light dark:bg-panel-dark rounded-xl p-4 overflow-hidden">
+    <div class="flex justify-between items-center mb-3">
+      <h1 class="font-semibold text-lg">🌐 IPTV — Países</h1>
+    </div>
+    <div class="flex gap-2 mb-3">
+      <button id="tabAll" class="flex-1 py-2 rounded-lg bg-accent text-white font-medium">Canales</button>
+      <button id="tabFav" class="flex-1 py-2 rounded-lg bg-gray-200 dark:bg-gray-800">Favoritos</button>
+      <button id="tabHist" class="flex-1 py-2 rounded-lg bg-gray-200 dark:bg-gray-800">Historial</button>
     </div>
 
-    <div class="search">
-      <input id="searchInput" placeholder="Buscar canal..." aria-label="Buscar canal" />
+    <div>
+      <button id="selectedCountry" class="w-full py-2 px-3 rounded-md border dark:border-gray-700 text-left bg-gray-100 dark:bg-gray-900 mb-2">Todos los países ▼</button>
+      <div id="dropdown" class="hidden bg-gray-50 dark:bg-gray-900 rounded-lg shadow-inner max-h-48 overflow-y-auto"></div>
     </div>
 
-    <div class="list" id="channelList" role="listbox" aria-label="Lista de canales"></div>
+    <input id="searchInput" placeholder="Buscar canal..." class="w-full p-2 rounded-md border dark:border-gray-700 bg-gray-100 dark:bg-gray-900 mb-3" />
+    <div id="channelList" class="overflow-y-auto flex-1 space-y-2 pr-2"></div>
   </div>
 
-  <div class="right">
-    <div class="now">
-      <div class="t" id="nowTitle">Selecciona un canal</div>
-    </div>
-
-    <div class="videoWrap" aria-live="polite">
-      <div id="overlay" class="overlay" role="alert" aria-hidden="true"></div>
-      <div id="spinner" class="spinner" aria-hidden="true">Cargando…</div>
-      <video id="player" controls playsinline crossorigin="anonymous" aria-label="Reproductor"></video>
+  <!-- Panel derecho -->
+  <div class="flex flex-col bg-panel-light dark:bg-panel-dark rounded-xl p-4 relative">
+    <div class="relative flex-1 bg-black rounded-xl overflow-hidden flex items-center justify-center">
+      <video id="player" controls playsinline crossorigin="anonymous" class="w-full h-full rounded-xl bg-black"></video>
+      <div id="overlay" class="absolute top-3 left-3 bg-black/60 text-white px-3 py-1.5 rounded-md hidden"></div>
+      <div id="spinner" class="absolute top-3 right-3 text-sm text-gray-400 hidden">Cargando…</div>
+      <button id="fsBtn" class="hidden absolute bottom-4 right-4 bg-accent text-white w-12 h-12 rounded-full text-2xl flex items-center justify-center">📺</button>
+      <div id="fsMenu" class="hidden absolute bottom-20 right-4 bg-gray-900/90 text-white rounded-lg p-3 w-72 max-h-[60vh] overflow-y-auto">
+        <input id="fsSearch" placeholder="Buscar canal..." class="w-full mb-2 p-1.5 rounded-md bg-gray-800 border border-gray-700 text-sm" />
+        <div id="fsList" class="space-y-1"></div>
+      </div>
     </div>
   </div>
 </div>
 
 <script>
 (async function(){
-  const M3U = "https://iptv-org.github.io/iptv/index.m3u";
-  const channelListEl = document.getElementById("channelList");
-  const searchInput = document.getElementById("searchInput");
-  const playerEl = document.getElementById("player");
-  const nowTitle = document.getElementById("nowTitle");
-  const overlay = document.getElementById("overlay");
-  const spinner = document.getElementById("spinner");
+  const loader=document.getElementById("loader");
+  const app=document.getElementById("app");
+  setTimeout(()=>{loader.remove();app.style.opacity="1";},2000);
 
-  let hls = null;
-  const channelEls = [];
-  let channels = [];
+  const M3U="https://iptv-org.github.io/iptv/index.country.m3u";
+  const player=document.getElementById("player");
+  const list=document.getElementById("channelList");
+  const search=document.getElementById("searchInput");
+  const overlay=document.getElementById("overlay");
+  const spinner=document.getElementById("spinner");
+  const fsBtn=document.getElementById("fsBtn");
+  const fsMenu=document.getElementById("fsMenu");
+  const fsList=document.getElementById("fsList");
+  const fsSearch=document.getElementById("fsSearch");
+  const sel=document.getElementById("selectedCountry");
+  const drop=document.getElementById("dropdown");
+  const tabAll=document.getElementById("tabAll");
+  const tabFav=document.getElementById("tabFav");
+  const tabHist=document.getElementById("tabHist");
 
-  // safe fetch text with timeout
-  async function fetchText(url, timeout = 15000){
-    const controller = new AbortController();
-    const tid = setTimeout(()=>controller.abort(), timeout);
-    try{
-      const res = await fetch(url, {signal: controller.signal});
-      clearTimeout(tid);
-      return await res.text();
-    }catch(e){
-      clearTimeout(tid);
-      throw e;
-    }
-  }
+  let hls=null,channels=[],countries=new Set();
+  let favoritos=JSON.parse(localStorage.getItem("favoritos")||"[]");
+  let historial=JSON.parse(localStorage.getItem("historial")||"[]");
 
-  // MODIFICADO: parse M3U ahora extrae tvg-logo
-  function parseM3u(text){
-    const lines = text.split(/\r?\n/);
-    const out = [];
+  async function fetchText(url){const res=await fetch(url);return await res.text();}
+  function parseM3U(text){
+    const lines=text.split(/\r?\n/),out=[];
     for(let i=0;i<lines.length;i++){
-      const L = lines[i].trim();
-      if(!L) continue;
+      const L=lines[i].trim();if(!L)continue;
       if(L.startsWith("#EXTINF")){
-        const infoLine = L;
-        const name = infoLine.includes(",") ? infoLine.substring(infoLine.indexOf(",")+1).trim() : "";
-        
-        // AÑADIDO: Extracción de tvg-logo usando regex
-        let tvgLogo = null;
-        const logoMatch = infoLine.match(/tvg-logo="([^"]+)"/);
-        if (logoMatch) {
-            tvgLogo = logoMatch[1];
-        }
-        
-        // next non-empty line is url
-        let j = i+1;
-        while(j < lines.length && lines[j].trim()==="") j++;
-        const url = (lines[j] || "").trim();
-        i = j;
-        
-        // MODIFICADO: Incluir tvgLogo en el objeto del canal
-        out.push({ name: name || url, url, tvgLogo });
+        const name=L.substring(L.indexOf(",")+1).trim();
+        const logo=L.match(/tvg-logo="([^"]+)"/)?.[1]||null;
+        const country=L.match(/group-title="([^"]+)"/)?.[1]||"Otros";
+        let j=i+1;while(j<lines.length&&lines[j].trim()==="")j++;
+        const url=lines[j]||"";
+        out.push({name,logo,url,country});
+        countries.add(country);
       }
     }
     return out;
   }
 
-  // MODIFICADO: create channel element para incluir el icono
-  function createChannelEl(item){
-    const el = document.createElement("div");
-    el.className = "chan";
-    el.tabIndex = 0;
-    
-    // AÑADIDO: Contenedor para el logo y el nombre
-    const infoContainer = document.createElement("div");
-    infoContainer.className = "chan-info";
-
-    // AÑADIDO: Creación del logo/icono
-    const logoWrap = document.createElement("div");
-    logoWrap.className = "logo";
-    
-    if (item.tvgLogo) {
-        const img = document.createElement("img");
-        img.src = item.tvgLogo;
-        img.alt = item.name + " logo";
-        img.loading = "lazy";
-        
-        // Fallback: si la imagen no carga, muestra las iniciales
-        img.onerror = () => {
-            img.remove();
-            logoWrap.textContent = item.name.slice(0, 2).toUpperCase();
-        };
-        logoWrap.appendChild(img);
-    } else {
-        // Si no hay logo, muestra las iniciales
-        logoWrap.textContent = item.name.slice(0, 2).toUpperCase();
-    }
-    
-    infoContainer.appendChild(logoWrap); // Añade el logo al contenedor
-
-    const nameDiv = document.createElement("div");
-    nameDiv.className = "cname";
-    nameDiv.textContent = item.name;
-
-    infoContainer.appendChild(nameDiv); // Añade el nombre al contenedor
-
-    const btn = document.createElement("div");
-    btn.className = "playbtn";
-    btn.textContent = "▶";
-
-    el.appendChild(infoContainer); // Añade el contenedor de info (logo + nombre)
-    el.appendChild(btn); // Añade el botón de play
-
-    el.dataset.url = item.url;
-    el._item = item;
-
-    // click => play
-    el.addEventListener("click", ()=> selectChannel(el, item, false));
-    // keyboard support
-    el.addEventListener("keydown", (e)=>{
-      if(e.key === "Enter" || e.key === " "){
-        e.preventDefault();
-        selectChannel(el, item, false);
-      }
-    });
-
-    return el;
-  }
-
-  // load M3U and render
   try{
-    const txt = await fetchText(M3U, 20000);
-    channels = parseM3u(txt);
+    const txt=await fetchText(M3U);
+    channels=parseM3U(txt);
   }catch(e){
-    // Nota: CORS sigue siendo un problema potencial sin un proxy, ajusté el mensaje.
-    channelListEl.innerHTML = "<div style='padding:12px;color:#f66'>Error cargando lista (CORS o red)</div>";
-    console.error("Error cargando M3U:", e);
+    list.innerHTML="<div class='text-red-400 p-3'>Error cargando lista</div>";
     return;
   }
 
-  for(const ch of channels){
-    const el = createChannelEl(ch);
-    channelListEl.appendChild(el);
-    channelEls.push(el);
+  function createChan(item){
+    const el=document.createElement("div");
+    el.className="flex justify-between items-center bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 p-2 rounded-md cursor-pointer transition";
+    const left=document.createElement("div");
+    left.className="flex items-center gap-2";
+    const logo=document.createElement("div");
+    logo.className="w-8 h-8 rounded-full bg-gray-300 dark:bg-gray-700 flex items-center justify-center text-xs text-gray-700 dark:text-gray-300";
+    if(item.logo){const img=document.createElement("img");img.src=item.logo;img.className="w-full h-full object-contain";img.onerror=()=>{img.remove();logo.textContent=item.name.slice(0,2)};logo.appendChild(img);}
+    else logo.textContent=item.name.slice(0,2);
+    const name=document.createElement("div");
+    name.textContent=item.name;name.className="truncate w-44 text-sm";
+    left.append(logo,name);
+
+    const fav=document.createElement("button");
+    fav.className="text-lg";fav.textContent=favoritos.includes(item.url)?"★":"☆";
+    fav.onclick=(ev)=>{
+      ev.stopPropagation();
+      if(favoritos.includes(item.url)){favoritos=favoritos.filter(f=>f!==item.url);fav.textContent="☆";}
+      else{favoritos.push(item.url);fav.textContent="★";}
+      localStorage.setItem("favoritos",JSON.stringify(favoritos));
+    };
+
+    el.append(left,fav);
+    el.onclick=()=>play(item,el);
+    el._country=item.country;
+    el._url=item.url;
+    return el;
   }
 
-  // realtime search (R1)
-  searchInput.addEventListener("input", ()=>{
-    const q = searchInput.value.trim().toLowerCase();
-    for(const el of channelEls){
-      const txt = (el._item.name || "").toLowerCase();
-      el.style.display = txt.includes(q) ? "flex" : "none";
-    }
-  });
-
-  // try to select the next channel once if current fails (S1)
-  function trySelectNextOnce(currentEl){
-    const idx = channelEls.indexOf(currentEl);
-    if(idx === -1) return;
-    const next = channelEls[idx + 1];
-    if(next){
-      setTimeout(()=> selectChannel(next, next._item, true), 300);
-    }
+  function render(type="all"){
+    list.innerHTML="";fsList.innerHTML="";
+    let arr=channels;
+    if(type==="fav")arr=channels.filter(c=>favoritos.includes(c.url));
+    if(type==="hist")arr=channels.filter(c=>historial.includes(c.url));
+    arr.forEach(ch=>{
+      const el=createChan(ch);
+      list.appendChild(el);
+      const fsEl=createChan(ch);
+      fsList.appendChild(fsEl);
+    });
   }
+  render();
 
-  // simplified HLS-only selectChannel (A1)
-  // autoAttempt = true when this selection comes from the auto-next call to avoid infinite loops
-  async function selectChannel(el, item, autoAttempt){
-    // UI highlight
-    channelEls.forEach(c => c.classList.remove("sel"));
-    el.classList.add("sel");
-    el.scrollIntoView({block: "center", behavior: "smooth"});
-
-    nowTitle.textContent = item.name;
-    overlay.style.display = "none";
-    overlay.textContent = "";
-    spinner.style.display = "block";
-
-    // cleanup previous
-    try{ if(hls){ hls.destroy(); hls = null; } }catch(e){}
-    try{ playerEl.pause(); playerEl.removeAttribute("src"); playerEl.load(); }catch(e){}
-
-    const src = item.url;
-    if(!src || (!src.startsWith("http://") && !src.startsWith("https://"))){
-      spinner.style.display = "none";
-      overlay.style.display = "block";
-      overlay.textContent = "URL inválida";
-      if(!autoAttempt) trySelectNextOnce(el);
-      return;
-    }
-
+  function play(ch,el){
+    document.querySelectorAll(".chan").forEach(c=>c.classList.remove("bg-gray-200","dark:bg-gray-700"));
+    el.classList.add("bg-gray-200","dark:bg-gray-700");
+    overlay.textContent=ch.name;
+    overlay.classList.remove("hidden");
+    setTimeout(()=>overlay.classList.add("hidden"),3000);
+    spinner.classList.remove("hidden");
+    if(hls){hls.destroy();hls=null;}
     if(Hls.isSupported()){
-      hls = new Hls();
-      hls.loadSource(src);
-      hls.attachMedia(playerEl);
-      hls.on(Hls.Events.MANIFEST_PARSED, function(){
-        spinner.style.display = "none";
-        playerEl.play().catch(()=>{ /* autoplay may be blocked by browser until user interacts */ });
-      });
-      hls.on(Hls.Events.ERROR, function(event, data){
-        console.warn("HLS error", data);
-        spinner.style.display = "none";
-        overlay.style.display = "block";
-        overlay.textContent = "No se pudo reproducir este canal";
-        if(!autoAttempt) trySelectNextOnce(el); // auto next only once
-      });
-    } else if (playerEl.canPlayType('application/vnd.apple.mpegurl')) {
-      // Safari native HLS
-      playerEl.src = src;
-      playerEl.play().then(()=>{ spinner.style.display = "none"; }).catch(()=>{ spinner.style.display = "none"; overlay.style.display = "block"; overlay.textContent = "No se pudo reproducir este canal"; if(!autoAttempt) trySelectNextOnce(el); });
-    } else {
-      spinner.style.display = "none";
-      overlay.style.display = "block";
-      overlay.textContent = "Tu navegador no soporta HLS";
-      if(!autoAttempt) trySelectNextOnce(el);
+      hls=new Hls();hls.loadSource(ch.url);hls.attachMedia(player);
+      hls.on(Hls.Events.MANIFEST_PARSED,()=>{spinner.classList.add("hidden");player.play();});
+    }else{player.src=ch.url;player.play();spinner.classList.add("hidden");}
+    if(!historial.includes(ch.url)){
+      historial.unshift(ch.url);
+      if(historial.length>50)historial.pop();
+      localStorage.setItem("historial",JSON.stringify(historial));
     }
   }
 
-  // keyboard navigation (arrows + enter)
-  document.addEventListener("keydown", (e)=>{
-    if(!channelEls.length) return;
-    let idx = channelEls.findIndex(x => x.classList.contains("sel"));
-    if(idx === -1) idx = 0;
-    if(e.key === "ArrowDown"){ idx = Math.min(channelEls.length - 1, idx + 1); channelEls[idx].focus(); channelEls[idx].scrollIntoView({block:"center"}); }
-    if(e.key === "ArrowUp"){ idx = Math.max(0, idx - 1); channelEls[idx].focus(); channelEls[idx].scrollIntoView({block:"center"}); }
-    if(e.key === "Enter" && document.activeElement && document.activeElement.classList.contains('chan')){ document.activeElement.click(); }
-  });
+  search.oninput=()=>{const q=search.value.toLowerCase();[...list.children].forEach(c=>c.style.display=c.textContent.toLowerCase().includes(q)?"flex":"none");};
+  fsSearch.oninput=()=>{const q=fsSearch.value.toLowerCase();[...fsList.children].forEach(c=>c.style.display=c.textContent.toLowerCase().includes(q)?"flex":"none");};
 
-  // done
-  console.log("Canales cargados:", channelEls.length);
+  sel.onclick=()=>drop.classList.toggle("hidden");
+  function fillCountries(){
+    const all=document.createElement("div");
+    all.textContent="Todos los países";
+    all.className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer";
+    all.onclick=()=>filter("Todos los países",all);
+    drop.appendChild(all);
+    countries.forEach(ct=>{
+      const d=document.createElement("div");
+      d.textContent=ct;
+      d.className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer";
+      d.onclick=()=>filter(ct,d);
+      drop.appendChild(d);
+    });
+  }
+  function filter(ct,btn){
+    sel.textContent=ct+" ▼";
+    [...drop.children].forEach(d=>d.classList.remove("bg-accent","text-white"));
+    btn.classList.add("bg-accent","text-white");
+    [...list.children].forEach(el=>el.style.display=(ct==="Todos los países"||el._country===ct)?"flex":"none");
+    drop.classList.add("hidden");
+  }
+  fillCountries();
+
+  tabAll.onclick=()=>{tabAll.classList.add("bg-accent","text-white");tabFav.classList.remove("bg-accent","text-white");tabHist.classList.remove("bg-accent","text-white");render("all");};
+  tabFav.onclick=()=>{tabFav.classList.add("bg-accent","text-white");tabAll.classList.remove("bg-accent","text-white");tabHist.classList.remove("bg-accent","text-white");render("fav");};
+  tabHist.onclick=()=>{tabHist.classList.add("bg-accent","text-white");tabAll.classList.remove("bg-accent","text-white");tabFav.classList.remove("bg-accent","text-white");render("hist");};
+
+  document.addEventListener("fullscreenchange",()=>{
+    if(document.fullscreenElement){fsBtn.classList.remove("hidden");}
+    else{fsBtn.classList.add("hidden");fsMenu.classList.add("hidden");}
+  });
+  fsBtn.onclick=()=>fsMenu.classList.toggle("hidden");
 })();
 </script>
 </body>
