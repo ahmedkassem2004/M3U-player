@@ -3,22 +3,30 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
-<title>IPTV Web Player M3U</title>
+<title id="app-title">Reproductor IPTV Web Moderno</title>
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 <style>
 /* ------------------------------------------------------------------- */
-/* ESTILOS BASE (MOBILE FIRST) */
+/* ESTILOS MODERNOS Y RESPONSIVOS */
 /* ------------------------------------------------------------------- */
+:root {
+    --bg-dark: #121212; /* Fondo principal oscuro */
+    --bg-medium: #212121; /* Fondo para controles y hover */
+    --border-soft: #333; /* Separadores y bordes suaves */
+    --accent-color: #00bcd4; /* Cian moderno */
+}
+
 body {
-    background: #0a0a0a;
+    background: var(--bg-dark);
     color: #fff;
-    font-family: Arial, Helvetica, sans-serif;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* Fuente moderna */
     display: flex;
     flex-direction: column; 
     height: 100vh;
     width: 100vw;
     margin: 0;
     overflow: hidden; 
+    /* RTL Direction handled by JS on language switch */
 }
 
 /* Panel Izquierdo (Lista de Canales y Controles) */
@@ -29,7 +37,7 @@ body {
     display: flex;
     flex-direction: column;
     border-right: none;
-    border-bottom: 1px solid #222;
+    border-bottom: 1px solid var(--border-soft);
     transition: transform 0.3s ease-in-out;
     position: relative;
     z-index: 10;
@@ -43,17 +51,30 @@ body {
     overflow: hidden;
 }
 
-/* Controles (Selectores y Buscador) */
-#country-select, #category-select, #search {
+/* Contenedor de controles para aplicar espaciado moderno */
+#controls-container {
     padding: 10px;
-    background: #111;
-    border: none;
+    background: var(--bg-dark);
+    border-bottom: 1px solid var(--border-soft);
+}
+
+/* Controles (Selectores y Buscador) */
+#language-select, #country-select, #category-select, #search {
+    padding: 12px 10px; /* Mayor padding vertical */
+    margin: 5px 0; /* Espacio entre controles */
+    background: var(--bg-medium);
+    border: 1px solid var(--border-soft);
     color: white;
     font-size: 15px;
     outline: none;
     width: 100%; 
     box-sizing: border-box;
-    border-bottom: 1px solid #222;
+    border-radius: 8px; /* Bordes redondeados modernos */
+    appearance: none; 
+}
+
+#language-select {
+    margin-bottom: 10px;
 }
 
 #list {
@@ -63,18 +84,25 @@ body {
 
 /* Estilos de la lista */
 .channel {
-    padding: 10px;
-    border-bottom: 1px solid #222;
+    padding: 12px;
+    border-bottom: 1px solid var(--border-soft);
     cursor: pointer;
-    transition: 0.2s;
-    /* Flexbox para alinear logo y texto */
+    transition: 0.3s ease;
     display: flex; 
     align-items: center;
     white-space: nowrap; 
     overflow: hidden; 
 }
-.channel:hover {background: #1e1e1e;}
-.active {background: #004d17 !important; border-left: 5px solid #22ff55;}
+.channel:hover {
+    background: var(--bg-medium);
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5); 
+}
+
+.active {
+    background: #00bcd430 !important; 
+    border-left: 5px solid var(--accent-color);
+    box-shadow: 0 0 5px rgba(0, 188, 212, 0.5);
+}
 
 /* Estilo para el logo */
 .channel-logo {
@@ -83,6 +111,7 @@ body {
     object-fit: contain; 
     margin-right: 10px;
     flex-shrink: 0; 
+    border-radius: 4px;
 }
 
 /* Estilo para el nombre del canal */
@@ -100,14 +129,19 @@ body {
     right: 10px;
     z-index: 20;
     padding: 10px 15px;
-    background: #004d17;
-    color: white;
+    background: var(--accent-color);
+    color: var(--bg-dark); 
     border: none;
-    border-radius: 5px;
+    border-radius: 8px; 
     cursor: pointer;
     font-size: 16px;
     font-weight: bold;
     display: block; 
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+    transition: background 0.2s;
+}
+#toggle-list-btn:active {
+    background: #008c9e; 
 }
 
 /* Reproductor de Video */
@@ -140,7 +174,7 @@ body {
         width: 320px; 
         height: 100%;
         max-height: 100%;
-        border-right: 1px solid #222;
+        border-right: 1px solid var(--border-soft);
         border-bottom: none;
         transform: none; 
     }
@@ -164,15 +198,24 @@ body {
 <button id="toggle-list-btn">☰ Canales</button>
 
 <div id="left">
-    <select id="country-select" onchange="filterChannels()">
-        <option value="">Cargando Países...</option>
-    </select>
-    
-    <select id="category-select" onchange="filterChannels()">
-        <option value="">Cargando Categorías...</option>
-    </select>
-    
-    <input type="text" id="search" placeholder="Buscar canal...">
+    <div id="controls-container">
+        <select id="language-select" onchange="setLanguage(this.value)">
+            <option value="es" selected>🇪🇸 Español</option>
+            <option value="en">🇬🇧 English</option>
+            <option value="pt">🇵🇹 Português</option>
+            <option value="ar">🇸🇦 العربية (Arabic)</option>
+        </select>
+
+        <select id="country-select" onchange="filterChannels()">
+            <option value="" id="opt-all-countries">Cargando Países...</option>
+        </select>
+        
+        <select id="category-select" onchange="filterChannels()">
+            <option value="" id="opt-all-categories">Cargando Categorías...</option>
+        </select>
+        
+        <input type="text" id="search" placeholder="Buscar canal...">
+    </div>
     
     <div id="list"></div>
 </div>
@@ -182,11 +225,66 @@ body {
 </div>
 
 <script>
-// ÚNICA URL M3U utilizada para obtener todos los datos
+// URLs
 const M3U_URL = "https://iptv-org.github.io/iptv/index.m3u"; 
+const COUNTRIES_API = "https://iptv-org.github.io/api/countries.json"; 
 
 let allChannels = []; 
 let channelsDOM = []; 
+let countryMap = {}; 
+let currentLang = 'es'; // Idioma por defecto
+
+// Objeto de Traducciones
+const translations = {
+    es: {
+        title: "Reproductor IPTV Web Moderno",
+        allCountries: "🌐 Todos los Países",
+        allCategories: "⭐ Todas las Categorías",
+        searchPlaceholder: "Buscar canal...",
+        loading: "Cargando lista de canales y datos...",
+        noChannels: "No se encontraron canales válidos.",
+        toggleOpen: "☰ Canales",
+        toggleClose: "X Cerrar",
+        errorLoad: "Error al cargar los datos.",
+        errorNoFilter: "No hay canales disponibles para el filtro actual.",
+    },
+    en: {
+        title: "Modern IPTV Web Player",
+        allCountries: "🌐 All Countries",
+        allCategories: "⭐ All Categories",
+        searchPlaceholder: "Search channel...",
+        loading: "Loading channel list and data...",
+        noChannels: "No valid channels found.",
+        toggleOpen: "☰ Channels",
+        toggleClose: "X Close",
+        errorLoad: "Error loading data.",
+        errorNoFilter: "No channels available for current filter.",
+    },
+    pt: {
+        title: "Reprodutor IPTV Web Moderno",
+        allCountries: "🌐 Todos os Países",
+        allCategories: "⭐ Todas as Categorias",
+        searchPlaceholder: "Pesquisar canal...",
+        loading: "Carregando lista de canais e dados...",
+        noChannels: "Nenhum canal válido encontrado.",
+        toggleOpen: "☰ Canais",
+        toggleClose: "X Fechar",
+        errorLoad: "Erro ao carregar dados.",
+        errorNoFilter: "Não há canais disponíveis para o filtro atual.",
+    },
+    ar: {
+        title: "مشغل IPTV ويب حديث",
+        allCountries: "🌐 جميع البلدان",
+        allCategories: "⭐ جميع الفئات",
+        searchPlaceholder: "ابحث عن قناة...",
+        loading: "جاري تحميل قائمة القنوات والبيانات...",
+        noChannels: "لم يتم العثور على قنوات صالحة.",
+        toggleOpen: "☰ القنوات",
+        toggleClose: "X إغلاق",
+        errorLoad: "خطأ في تحميل البيانات.",
+        errorNoFilter: "لا توجد قنوات متاحة للفلتر الحالي.",
+    }
+};
 
 // Referencias a elementos DOM
 const list = document.getElementById("list");
@@ -198,38 +296,91 @@ const toggleBtn = document.getElementById("toggle-list-btn");
 
 
 /**
+ * Traduce todos los elementos visibles de la interfaz.
+ */
+function setLanguage(langCode) {
+    currentLang = langCode;
+    const t = translations[langCode];
+    
+    // 1. Título de la página
+    document.getElementById("app-title").innerText = t.title;
+
+    // 2. Placeholder y Botones
+    searchInput.placeholder = t.searchPlaceholder;
+    if (leftPanel.classList.contains('hidden')) {
+        toggleBtn.innerText = t.toggleOpen;
+    } else {
+        toggleBtn.innerText = t.toggleClose;
+    }
+
+    // 3. Opciones de País y Categoría
+    document.getElementById("opt-all-countries").innerText = t.allCountries + (allChannels.length > 0 ? ` (${allChannels.length})` : '');
+    document.getElementById("opt-all-categories").innerText = t.allCategories;
+
+    // 4. Dirección del texto (RTL para árabe)
+    document.body.style.direction = (langCode === 'ar') ? 'rtl' : 'ltr';
+    // Ajustar el botón de móvil si la dirección cambia
+    if (langCode === 'ar') {
+        toggleBtn.style.right = 'auto';
+        toggleBtn.style.left = '10px';
+    } else {
+        toggleBtn.style.right = '10px';
+        toggleBtn.style.left = 'auto';
+    }
+    
+    // Opcional: Re-renderizar la lista si es necesario, pero solo cambiamos los selectores principales
+    // Si la lista está mostrando un mensaje de error/carga, lo actualizamos.
+    if (list.innerHTML.includes('Cargando')) {
+         list.innerHTML = `<div style="padding: 10px; color: var(--accent-color);">${t.loading}</div>`;
+    }
+}
+
+
+/**
  * Función auxiliar para extraer el valor de un atributo de la línea EXTINF.
- * @param {string} line - Línea #EXTINF completa.
- * @param {string} attr - Nombre del atributo (ej. 'tvg-country').
- * @returns {string} El valor del atributo, o cadena vacía si no se encuentra.
  */
 const extractAttr = (line, attr) => {
-    // Expresión regular para encontrar attr="value"
     const match = line.match(new RegExp(attr + '="([^"]*)"'));
     return match ? match[1].trim() : '';
 };
 
+async function fetchData(url) {
+    const response = await fetch(url);
+    if (!response.ok) {
+        throw new Error(`Error al obtener ${url}: ${response.statusText}`);
+    }
+    return response.json();
+}
 
 /**
- * Carga el archivo M3U, lo parsea para obtener canales, países, categorías y logos.
+ * Carga el archivo M3U, lo parsea y carga el mapa de países.
  */
 async function loadList() {
-    list.innerHTML = '<div style="padding: 10px; color: #22ff55;">Cargando lista de canales y datos de M3U...</div>';
+    // Usamos la traducción para el mensaje de carga
+    list.innerHTML = `<div style="padding: 10px; color: var(--accent-color);">${translations[currentLang].loading}</div>`;
     
     try {
-        let text = await fetch(M3U_URL).then(r => r.text());
-        let lines = text.split("\n");
+        const [m3uText, countriesData] = await Promise.all([
+            fetch(M3U_URL).then(r => r.text()),
+            fetchData(COUNTRIES_API)
+        ]);
         
+        // 1. Crear Mapa de Países (código -> nombre)
+        countriesData.forEach(country => {
+            countryMap[country.code.toUpperCase()] = country.name;
+        });
+
+        // 2. Parseo del M3U
+        let lines = m3uText.split("\n");
         allChannels = [];
         const countries = new Set();
         const categories = new Set();
-
+        
         for (let i = 0; i < lines.length; i++) {
             if (lines[i].startsWith("#EXTINF")) {
                 let extinfLine = lines[i];
                 let url = lines[i + 1] ? lines[i + 1].trim() : '';
 
-                // 1. Extracción de atributos de la línea #EXTINF
                 const name = extinfLine.split(",").pop().trim();
                 const country = extractAttr(extinfLine, 'tvg-country').toUpperCase() || 'ZZ';
                 const categoryName = extractAttr(extinfLine, 'group-title') || 'Otros';
@@ -241,7 +392,7 @@ async function loadList() {
                         url,
                         country,
                         categoryName,
-                        logo // URL del logo extraída
+                        logo
                     });
                     countries.add(country);
                     categories.add(categoryName);
@@ -250,22 +401,34 @@ async function loadList() {
         }
         
         if (allChannels.length === 0) {
-            list.innerHTML = '<div style="padding: 10px; color: red;">No se encontraron canales válidos en el archivo M3U.</div>';
+            list.innerHTML = `<div style="padding: 10px; color: red;">${translations[currentLang].noChannels}</div>`;
             return;
         }
 
-        // 2. Poblar Selector de Países
-        countrySelect.innerHTML = '<option value="">🌐 Todos los Países (' + allChannels.length + ')</option>';
+        // 3. Poblar Selector de Países
+        const optAllCountries = document.getElementById("opt-all-countries");
+        optAllCountries.value = "";
+        optAllCountries.innerText = translations[currentLang].allCountries + ` (${allChannels.length})`;
+        
+        countrySelect.innerHTML = '';
+        countrySelect.appendChild(optAllCountries);
+
         Array.from(countries).sort().forEach(countryCode => {
-            // Usamos el código de país directamente, ya que no tenemos la API de países.json
+            let name = countryMap[countryCode] || countryCode;
             let option = document.createElement("option");
             option.value = countryCode;
-            option.innerText = countryCode; 
+            option.innerText = name; 
             countrySelect.appendChild(option);
         });
         
-        // 3. Poblar Selector de Categorías
-        categorySelect.innerHTML = '<option value="">⭐ Todas las Categorías</option>';
+        // 4. Poblar Selector de Categorías
+        const optAllCategories = document.getElementById("opt-all-categories");
+        optAllCategories.value = "";
+        optAllCategories.innerText = translations[currentLang].allCategories;
+
+        categorySelect.innerHTML = '';
+        categorySelect.appendChild(optAllCategories);
+
         Array.from(categories).sort().forEach(categoryName => {
             let option = document.createElement("option");
             option.value = categoryName;
@@ -274,15 +437,15 @@ async function loadList() {
         });
 
 
-        // 4. Inicialización
+        // 5. Inicialización
         filterChannels(); 
         setupMobileToggle();
 
     } catch (error) {
-        console.error("Error al cargar o parsear el archivo M3U:", error);
-        countrySelect.innerHTML = '<option value="">Error de Carga</option>';
-        categorySelect.innerHTML = '<option value="">Error de Carga</option>';
-        list.innerHTML = '<div style="padding: 10px; color: red;">Error al cargar los datos M3U.</div>';
+        console.error("Error al cargar datos:", error);
+        countrySelect.innerHTML = `<option value="">${translations[currentLang].errorLoad}</option>`;
+        categorySelect.innerHTML = `<option value="">${translations[currentLang].errorLoad}</option>`;
+        list.innerHTML = `<div style="padding: 10px; color: red;">${translations[currentLang].errorLoad}</div>`;
     }
 }
 
@@ -313,7 +476,7 @@ function renderChannels(channelsToShow) {
     channelsDOM = [];
 
     if (channelsToShow.length === 0) {
-        list.innerHTML = `<div style="padding: 10px; color: #ffeb3b;">No hay canales disponibles para el filtro actual.</div>`;
+        list.innerHTML = `<div style="padding: 10px; color: #ffeb3b;">${translations[currentLang].errorNoFilter}</div>`;
         return;
     }
 
@@ -325,12 +488,10 @@ function renderChannels(channelsToShow) {
 
         // Integración del logo con corrección de error de carga
         if (channel.logo) {
-            // Si la imagen falla al cargar (ej. URL inválida o CORS), "this.style.display='none';" la oculta.
             const logoHtml = `<img src="${channel.logo}" class="channel-logo" alt="${channel.name} Logo" onerror="this.style.display='none';">`;
             const nameHtml = `<span>${channel.name}</span>`;
             div.innerHTML = logoHtml + nameHtml;
         } else {
-            // Si no hay logo, solo el nombre
             div.innerHTML = `<span>${channel.name}</span>`;
         }
 
@@ -344,7 +505,7 @@ function play(div){
     // Ocultar la lista de canales al iniciar la reproducción en móvil
     if (window.innerWidth < 768) {
         leftPanel.classList.add('hidden');
-        toggleBtn.innerText = '☰ Canales';
+        toggleBtn.innerText = translations[currentLang].toggleOpen;
     }
 
     // Resaltar canal activo
@@ -354,7 +515,6 @@ function play(div){
     var url = div.dataset.url;
     var video = document.getElementById('video');
 
-    // Manejo de HLS.js (destruir/recrear)
     if (Hls.isSupported()) {
         if(video.hls){
              video.hls.destroy(); 
@@ -379,11 +539,13 @@ function play(div){
 function setupMobileToggle() {
     if (window.innerWidth < 768) {
         leftPanel.classList.add('hidden');
+        toggleBtn.innerText = translations[currentLang].toggleOpen;
     }
 
     toggleBtn.addEventListener('click', () => {
         leftPanel.classList.toggle('hidden');
-        toggleBtn.innerText = leftPanel.classList.contains('hidden') ? '☰ Canales' : 'X Cerrar';
+        const isHidden = leftPanel.classList.contains('hidden');
+        toggleBtn.innerText = isHidden ? translations[currentLang].toggleOpen : translations[currentLang].toggleClose;
     });
 
     window.addEventListener('resize', () => {
@@ -392,6 +554,8 @@ function setupMobileToggle() {
             leftPanel.classList.remove('hidden'); 
         } else {
             toggleBtn.style.display = 'block';
+            const isHidden = leftPanel.classList.contains('hidden');
+            toggleBtn.innerText = isHidden ? translations[currentLang].toggleOpen : translations[currentLang].toggleClose;
         }
     });
 }
@@ -400,6 +564,7 @@ function setupMobileToggle() {
 searchInput.addEventListener("input", filterChannels);
 
 // Inicialización
+setLanguage(document.getElementById('language-select').value); // Set default language texts
 loadList();
 </script>
 
