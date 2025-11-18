@@ -1,573 +1,303 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0"> 
-<title id="app-title">Reproductor IPTV Web Moderno</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title id="app-title">IPTV PLAYER</title>
+
+<!-- App icons / PWA -->
+<link rel="icon" href="https://cdn-icons-png.flaticon.com/512/633/633600.png" />
+<link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/633/633600.png" />
+<meta name="theme-color" content="#121212" />
+<link rel="manifest" href='data:application/json,{"name":"IPTV Player","short_name":"IPTV","start_url":".","display":"standalone","background_color":"#121212","theme_color":"#121212","icons":[{"src":"https://cdn-icons-png.flaticon.com/512/633/633600.png","sizes":"512x512","type":"image/png"}]}'>
+
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+
 <style>
-/* ------------------------------------------------------------------- */
-/* ESTILOS MODERNOS Y RESPONSIVOS */
-/* ------------------------------------------------------------------- */
-:root {
-    --bg-dark: #121212; /* Fondo principal oscuro */
-    --bg-medium: #212121; /* Fondo para controles y hover */
-    --border-soft: #333; /* Separadores y bordes suaves */
-    --accent-color: #00bcd4; /* Cian moderno */
+:root{
+  --bg-dark:#121212;
+  --bg-medium:#1f1f1f;
+  --border-soft:#2f2f2f;
+  --accent:#00bcd4;
+  --text:#eaeaea;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;background:var(--bg-dark);color:var(--text);font-family:Inter,Segoe UI,Roboto,Arial,sans-serif}
+body{display:flex;flex-direction:column;overflow:hidden}
+
+/* Mobile-first layout */
+#toggle-list-btn{
+  position:fixed;top:12px;right:12px;z-index:60;padding:10px 14px;background:var(--accent);color:#071018;border:none;border-radius:10px;cursor:pointer;box-shadow:0 8px 20px rgba(0,0,0,0.6)
+}
+.app{display:flex;flex-direction:column;height:100vh;width:100vw;gap:0}
+
+/* Left panel */
+#left{width:100%;height:44vh;max-height:44vh;background:var(--bg-medium);border-bottom:1px solid var(--border-soft);padding:12px;overflow:hidden;transition:transform .28s;display:flex;flex-direction:column}
+#left.hidden{transform:translateY(-110%)}
+#controls-container{display:flex;flex-direction:column;gap:8px;margin-bottom:8px}
+select,input{width:100%;padding:10px;border-radius:8px;border:1px solid var(--border-soft);background:#0f1112;color:var(--text);outline:none}
+#list{
+  overflow-y:auto;
+  flex:1;
+  min-height:0;
+  padding-right:8px;
 }
 
-body {
-    background: var(--bg-dark);
-    color: #fff;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* Fuente moderna */
-    display: flex;
-    flex-direction: column; 
-    height: 100vh;
-    width: 100vw;
-    margin: 0;
-    overflow: hidden; 
-    /* RTL Direction handled by JS on language switch */
-}
+/* Channel items */
+.channel{display:flex;align-items:center;gap:12px;padding:10px;border-radius:8px;border-bottom:1px solid rgba(255,255,255,0.02);cursor:pointer}
+.channel:hover{background:rgba(255,255,255,0.02)}
+.channel.active{background:linear-gradient(90deg,rgba(0,188,212,0.08),rgba(0,188,212,0.03));border-left:4px solid var(--accent)}
+.channel-logo{width:36px;height:36px;border-radius:6px;flex-shrink:0;background:#0b0b0b;display:flex;align-items:center;justify-content:center;overflow:hidden;color:#ccc;font-weight:bold;font-size:14px}
+.channel-logo img{width:100%;height:100%;object-fit:contain;display:block}
+.channel-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
-/* Panel Izquierdo (Lista de Canales y Controles) */
-#left {
-    width: 100%;
-    height: 50vh; 
-    max-height: 50vh;
-    display: flex;
-    flex-direction: column;
-    border-right: none;
-    border-bottom: 1px solid var(--border-soft);
-    transition: transform 0.3s ease-in-out;
-    position: relative;
-    z-index: 10;
-}
+/* Player */
+#playerWrap{flex:1;background:linear-gradient(180deg,#000,#050507);display:flex;align-items:center;justify-content:center;padding:12px;position:relative}
+video{width:100%;height:100%;max-height:100%;border-radius:12px;background:#000;outline:none}
+.overlay{position:absolute;top:14px;left:14px;background:rgba(0,0,0,0.6);padding:8px 12px;border-radius:8px;display:none;color:#ffdede}
+.spinnerSmall{position:absolute;right:14px;top:14px;padding:6px 10px;border-radius:8px;background:rgba(255,255,255,0.04);color:#b6c0c7;display:none}
 
-/* Clase para ocultar el panel izquierdo en móvil */
-#left.hidden {
-    transform: translateY(-100%);
-    height: 0;
-    max-height: 0;
-    overflow: hidden;
-}
+/* Bottom menu */
+#bottomMenu{position:fixed;left:0;right:0;bottom:0;height:62px;background:linear-gradient(180deg,#0b0b0b,#0a0a0a);display:flex;align-items:center;justify-content:space-around;border-top:1px solid var(--border-soft);z-index:55}
+.menu-btn{display:flex;flex-direction:column;align-items:center;font-size:12px;color:#bfc8cc;gap:4px}
 
-/* Contenedor de controles para aplicar espaciado moderno */
-#controls-container {
-    padding: 10px;
-    background: var(--bg-dark);
-    border-bottom: 1px solid var(--border-soft);
-}
-
-/* Controles (Selectores y Buscador) */
-#language-select, #country-select, #category-select, #search {
-    padding: 12px 10px; /* Mayor padding vertical */
-    margin: 5px 0; /* Espacio entre controles */
-    background: var(--bg-medium);
-    border: 1px solid var(--border-soft);
-    color: white;
-    font-size: 15px;
-    outline: none;
-    width: 100%; 
-    box-sizing: border-box;
-    border-radius: 8px; /* Bordes redondeados modernos */
-    appearance: none; 
-}
-
-#language-select {
-    margin-bottom: 10px;
-}
-
-#list {
-    flex: 1;
-    overflow-y: auto;
-}
-
-/* Estilos de la lista */
-.channel {
-    padding: 12px;
-    border-bottom: 1px solid var(--border-soft);
-    cursor: pointer;
-    transition: 0.3s ease;
-    display: flex; 
-    align-items: center;
-    white-space: nowrap; 
-    overflow: hidden; 
-}
-.channel:hover {
-    background: var(--bg-medium);
-    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5); 
-}
-
-.active {
-    background: #00bcd430 !important; 
-    border-left: 5px solid var(--accent-color);
-    box-shadow: 0 0 5px rgba(0, 188, 212, 0.5);
-}
-
-/* Estilo para el logo */
-.channel-logo {
-    width: 30px; 
-    height: 30px;
-    object-fit: contain; 
-    margin-right: 10px;
-    flex-shrink: 0; 
-    border-radius: 4px;
-}
-
-/* Estilo para el nombre del canal */
-.channel span {
-    flex-grow: 1;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-
-/* Botón para Mostrar/Ocultar la lista en móvil */
-#toggle-list-btn {
-    position: fixed;
-    top: 10px;
-    right: 10px;
-    z-index: 20;
-    padding: 10px 15px;
-    background: var(--accent-color);
-    color: var(--bg-dark); 
-    border: none;
-    border-radius: 8px; 
-    cursor: pointer;
-    font-size: 16px;
-    font-weight: bold;
-    display: block; 
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
-    transition: background 0.2s;
-}
-#toggle-list-btn:active {
-    background: #008c9e; 
-}
-
-/* Reproductor de Video */
-#player {
-    flex: 1; 
-    width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-#video {
-    max-width: 100%;
-    max-height: 100%;
-    width: 100%;
-    height: 100%;
-    object-fit: contain; 
-}
-
-
-/* ------------------------------------------------------------------- */
-/* MEDIA QUERY: ESCRITORIO (a partir de 768px) */
-/* ------------------------------------------------------------------- */
-@media (min-width: 768px) {
-    body {
-        flex-direction: row; 
-    }
-
-    #left {
-        width: 320px; 
-        height: 100%;
-        max-height: 100%;
-        border-right: 1px solid var(--border-soft);
-        border-bottom: none;
-        transform: none; 
-    }
-
-    /* Ocultar el botón en escritorio */
-    #toggle-list-btn {
-        display: none !important;
-    }
-
-    #left.hidden {
-        transform: none;
-        height: 100%;
-        max-height: 100%;
-        overflow: auto;
-    }
+/* Desktop */
+@media(min-width:900px){
+  .app{flex-direction:row}
+  #left{width:360px;height:100%;max-height:100%}
+  #playerWrap{flex:1;padding:18px}
+  #toggle-list-btn{display:none}
+  #bottomMenu{display:none}
 }
 </style>
 </head>
 <body>
-
 <button id="toggle-list-btn">☰ Canales</button>
 
-<div id="left">
+<div class="app" id="app">
+  <aside id="left">
     <div id="controls-container">
-        <select id="language-select" onchange="setLanguage(this.value)">
-            <option value="es" selected>🇪🇸 Español</option>
-            <option value="en">🇬🇧 English</option>
-            <option value="pt">🇵🇹 Português</option>
-            <option value="ar">🇸🇦 العربية (Arabic)</option>
-        </select>
+      <select id="language-select" onchange="setLanguage(this.value)">
+        <option value="es" selected>🇪🇸 Español</option>
+        <option value="en">🇬🇧 English</option>
+        <option value="pt">🇵🇹 Português</option>
+        <option value="ar">العربية</option>
+      </select>
 
-        <select id="country-select" onchange="filterChannels()">
-            <option value="" id="opt-all-countries">Cargando Países...</option>
-        </select>
-        
-        <select id="category-select" onchange="filterChannels()">
-            <option value="" id="opt-all-categories">Cargando Categorías...</option>
-        </select>
-        
-        <input type="text" id="search" placeholder="Buscar canal...">
+      <select id="country-select" onchange="filterChannels()">
+        <option value="" id="opt-all-countries">Cargando Países...</option>
+      </select>
+
+      <select id="category-select" onchange="filterChannels()">
+        <option value="" id="opt-all-categories">Cargando Categorías...</option>
+      </select>
+
+      <input id="search" placeholder="Buscar canal..." />
     </div>
-    
+
     <div id="list"></div>
+  </aside>
+
+  <main id="playerWrap">
+    <div style="width:100%;height:100%;max-width:1400px;max-height:85vh;position:relative">
+      <video id="video" controls playsinline crossorigin="anonymous"></video>
+      <div id="overlay" class="overlay"></div>
+      <div id="spinner" class="spinnerSmall">Cargando…</div>
+    </div>
+  </main>
 </div>
 
-<div id="player">
-    <video id="video" controls width="100%" height="100%"></video>
-</div>
+<nav id="bottomMenu">
+  <div class="menu-btn" id="btn-channels">☰<span>Canales</span></div>
+  <div class="menu-btn" id="btn-favs">★<span>Favoritos</span></div>
+  <div class="menu-btn" id="btn-hist">⟲<span>Historial</span></div>
+</nav>
 
 <script>
-// URLs
-const M3U_URL = "https://iptv-org.github.io/iptv/index.m3u"; 
-const COUNTRIES_API = "https://iptv-org.github.io/api/countries.json"; 
+/* IPTV SETTINGS */
+const M3U_URL = "https://iptv-org.github.io/iptv/index.m3u";
+const COUNTRIES_API = "https://iptv-org.github.io/api/countries.json";
 
-let allChannels = []; 
-let channelsDOM = []; 
-let countryMap = {}; 
-let currentLang = 'es'; // Idioma por defecto
+/* DOM */
+const video = document.getElementById('video');
+const listEl = document.getElementById('list');
+const countrySelect = document.getElementById('country-select');
+const categorySelect = document.getElementById('category-select');
+const searchInput = document.getElementById('search');
+const overlay = document.getElementById('overlay');
+const spinner = document.getElementById('spinner');
+const toggleBtn = document.getElementById('toggle-list-btn');
+const leftPanel = document.getElementById('left');
 
-// Objeto de Traducciones
+/* STATE */
+let hls = null;
+let allChannels = [];
+let channelsDOM = [];
+let countriesMap = {};
+let currentLang = 'es';
+let favorites = [];
+let historyList = [];
+
+/* TRANSLATIONS */
 const translations = {
-    es: {
-        title: "Reproductor IPTV Web Moderno",
-        allCountries: "🌐 Todos los Países",
-        allCategories: "⭐ Todas las Categorías",
-        searchPlaceholder: "Buscar canal...",
-        loading: "Cargando lista de canales y datos...",
-        noChannels: "No se encontraron canales válidos.",
-        toggleOpen: "☰ Canales",
-        toggleClose: "X Cerrar",
-        errorLoad: "Error al cargar los datos.",
-        errorNoFilter: "No hay canales disponibles para el filtro actual.",
-    },
-    en: {
-        title: "Modern IPTV Web Player",
-        allCountries: "🌐 All Countries",
-        allCategories: "⭐ All Categories",
-        searchPlaceholder: "Search channel...",
-        loading: "Loading channel list and data...",
-        noChannels: "No valid channels found.",
-        toggleOpen: "☰ Channels",
-        toggleClose: "X Close",
-        errorLoad: "Error loading data.",
-        errorNoFilter: "No channels available for current filter.",
-    },
-    pt: {
-        title: "Reprodutor IPTV Web Moderno",
-        allCountries: "🌐 Todos os Países",
-        allCategories: "⭐ Todas as Categorias",
-        searchPlaceholder: "Pesquisar canal...",
-        loading: "Carregando lista de canais e dados...",
-        noChannels: "Nenhum canal válido encontrado.",
-        toggleOpen: "☰ Canais",
-        toggleClose: "X Fechar",
-        errorLoad: "Erro ao carregar dados.",
-        errorNoFilter: "Não há canais disponíveis para o filtro atual.",
-    },
-    ar: {
-        title: "مشغل IPTV ويب حديث",
-        allCountries: "🌐 جميع البلدان",
-        allCategories: "⭐ جميع الفئات",
-        searchPlaceholder: "ابحث عن قناة...",
-        loading: "جاري تحميل قائمة القنوات والبيانات...",
-        noChannels: "لم يتم العثور على قنوات صالحة.",
-        toggleOpen: "☰ القنوات",
-        toggleClose: "X إغلاق",
-        errorLoad: "خطأ في تحميل البيانات.",
-        errorNoFilter: "لا توجد قنوات متاحة للفلتر الحالي.",
-    }
+  es:{ loading:"Cargando lista...", noChannels:"No se encontraron canales.", toggleOpen:"☰ Canales", toggleClose:"X Cerrar", search:"Buscar canal..." },
+  en:{ loading:"Loading list...", noChannels:"No channels found.", toggleOpen:"☰ Channels", toggleClose:"X Close", search:"Search channel..." },
+  pt:{ loading:"Carregando lista...", noChannels:"Nenhum canal encontrado.", toggleOpen:"☰ Canais", toggleClose:"X Fechar", search:"Pesquisar canal..." },
+  ar:{ loading:"جارٍ التحميل...", noChannels:"لم يتم العثور على القنوات.", toggleOpen:"☰ القنوات", toggleClose:"X إغلاق", search:"ابحث عن قناة..." }
 };
 
-// Referencias a elementos DOM
-const list = document.getElementById("list");
-const countrySelect = document.getElementById("country-select");
-const categorySelect = document.getElementById("category-select");
-const searchInput = document.getElementById("search");
-const leftPanel = document.getElementById("left");
-const toggleBtn = document.getElementById("toggle-list-btn");
-
-
-/**
- * Traduce todos los elementos visibles de la interfaz.
- */
-function setLanguage(langCode) {
-    currentLang = langCode;
-    const t = translations[langCode];
-    
-    // 1. Título de la página
-    document.getElementById("app-title").innerText = t.title;
-
-    // 2. Placeholder y Botones
-    searchInput.placeholder = t.searchPlaceholder;
-    if (leftPanel.classList.contains('hidden')) {
-        toggleBtn.innerText = t.toggleOpen;
-    } else {
-        toggleBtn.innerText = t.toggleClose;
-    }
-
-    // 3. Opciones de País y Categoría
-    document.getElementById("opt-all-countries").innerText = t.allCountries + (allChannels.length > 0 ? ` (${allChannels.length})` : '');
-    document.getElementById("opt-all-categories").innerText = t.allCategories;
-
-    // 4. Dirección del texto (RTL para árabe)
-    document.body.style.direction = (langCode === 'ar') ? 'rtl' : 'ltr';
-    // Ajustar el botón de móvil si la dirección cambia
-    if (langCode === 'ar') {
-        toggleBtn.style.right = 'auto';
-        toggleBtn.style.left = '10px';
-    } else {
-        toggleBtn.style.right = '10px';
-        toggleBtn.style.left = 'auto';
-    }
-    
-    // Opcional: Re-renderizar la lista si es necesario, pero solo cambiamos los selectores principales
-    // Si la lista está mostrando un mensaje de error/carga, lo actualizamos.
-    if (list.innerHTML.includes('Cargando')) {
-         list.innerHTML = `<div style="padding: 10px; color: var(--accent-color);">${t.loading}</div>`;
-    }
+/* LANGUAGE */
+function setLanguage(lang){
+  currentLang = lang;
+  searchInput.placeholder = translations[lang].search;
 }
 
+/* UTILS */
+async function fetchJSON(url){ const r = await fetch(url); return r.json(); }
+function extractAttr(line,key){ const m=line.match(new RegExp(key+'="([^"]*)"')); return m?m[1]:""; }
 
-/**
- * Función auxiliar para extraer el valor de un atributo de la línea EXTINF.
- */
-const extractAttr = (line, attr) => {
-    const match = line.match(new RegExp(attr + '="([^"]*)"'));
-    return match ? match[1].trim() : '';
+/* LOAD LIST */
+async function loadList(){
+  listEl.innerHTML = `<div style="padding:12px;color:var(--accent)">${translations[currentLang].loading}</div>`;
+
+  const [m3uText, countries] = await Promise.all([
+    fetch(M3U_URL).then(r=>r.text()),
+    fetchJSON(COUNTRIES_API)
+  ]);
+
+  countries.forEach(c=>countriesMap[c.code.toUpperCase()] = c.name);
+
+  const lines = m3uText.split("\n");
+  allChannels=[];
+  const cSet=new Set();
+  const gSet=new Set();
+
+  for(let i=0;i<lines.length;i++){
+    if(lines[i].startsWith("#EXTINF")){
+      const L=lines[i];
+      const name=L.split(",").pop().trim();
+      const url=(lines[i+1]||"").trim();
+      i++;
+      if(!name||!url) continue;
+      const logo=extractAttr(L,"tvg-logo");
+      const country=extractAttr(L,"tvg-country").toUpperCase()||"OTROS";
+      const group=extractAttr(L,"group-title")||"Otros";
+
+      allChannels.push({name,logo,url,country,group});
+      cSet.add(country);
+      gSet.add(group);
+    }
+  }
+
+  renderList(allChannels);
+  fillFilters(cSet,gSet);
+}
+
+/* FILTERS */
+function fillFilters(cSet,gSet){
+  countrySelect.innerHTML = `<option value="">🌐 Países (${allChannels.length})</option>`;
+  [...cSet].sort().forEach(c=>{
+    countrySelect.innerHTML += `<option value="${c}">${countriesMap[c]||c}</option>`;
+  });
+
+  categorySelect.innerHTML = `<option value="">⭐ Categorías</option>`;
+  [...gSet].sort().forEach(g=>{
+    categorySelect.innerHTML += `<option value="${g}">${g}</option>`;
+  });
+}
+
+/* SEARCH (DEBOUNCE) */
+let searchTimer=null;
+searchInput.addEventListener("input",()=>{
+  clearTimeout(searchTimer);
+  searchTimer=setTimeout(filterChannels,80);
+});
+
+/* FILTER CHANNELS */
+function filterChannels(){
+  const c=countrySelect.value;
+  const g=categorySelect.value;
+  const q=searchInput.value.toLowerCase();
+
+  const filtered=allChannels.filter(ch=>{
+    return (!c||ch.country===c)
+        &&(!g||ch.group===g)
+        &&(!q||ch.name.toLowerCase().includes(q));
+  });
+
+  renderList(filtered);
+}
+
+/* RENDER */
+function renderList(channels){
+  listEl.innerHTML="";
+  channelsDOM=[];
+  channels.forEach(ch=>{
+    const div=document.createElement("div");
+    div.className="channel";
+    div.dataset.url=ch.url;
+
+    const logo=document.createElement("div");
+    logo.className="channel-logo";
+    if(ch.logo){
+      const img=document.createElement("img");
+      img.src=ch.logo;
+      img.onerror=()=>{img.remove();logo.textContent=ch.name.slice(0,2);}
+      logo.appendChild(img);
+    }else logo.textContent=ch.name.slice(0,2);
+
+    const name=document.createElement("div");
+    name.className="channel-name";
+    name.textContent=ch.name;
+
+    div.appendChild(logo);
+    div.appendChild(name);
+    div.onclick=()=>playChannel(ch,div);
+
+    listEl.appendChild(div);
+    channelsDOM.push(div);
+  });
+}
+
+/* PLAY */
+async function playChannel(ch,div){
+  channelsDOM.forEach(c=>c.classList.remove("active"));
+  if(div) div.classList.add("active");
+
+  if(window.innerWidth<900){
+    leftPanel.classList.add("hidden");
+    toggleBtn.textContent = translations[currentLang].toggleOpen;
+  }
+
+  overlay.textContent=ch.name;
+  overlay.style.display="block";
+  setTimeout(()=>overlay.style.display="none",2500);
+
+  spinner.style.display="block";
+
+  if(hls){ hls.destroy(); hls=null; }
+  video.pause();
+
+  if(ch.url.includes(".m3u8") && Hls.isSupported()){
+    hls=new Hls();
+    hls.loadSource(ch.url);
+    hls.attachMedia(video);
+    hls.on(Hls.Events.MANIFEST_PARSED,()=>{spinner.style.display="none";video.play();});
+  }else{
+    video.src=ch.url;
+    video.onloadeddata=()=>{spinner.style.display="none";video.play();}
+  }
+}
+
+/* MOBILE */
+toggleBtn.onclick=()=>{
+  leftPanel.classList.toggle("hidden");
 };
 
-async function fetchData(url) {
-    const response = await fetch(url);
-    if (!response.ok) {
-        throw new Error(`Error al obtener ${url}: ${response.statusText}`);
-    }
-    return response.json();
-}
-
-/**
- * Carga el archivo M3U, lo parsea y carga el mapa de países.
- */
-async function loadList() {
-    // Usamos la traducción para el mensaje de carga
-    list.innerHTML = `<div style="padding: 10px; color: var(--accent-color);">${translations[currentLang].loading}</div>`;
-    
-    try {
-        const [m3uText, countriesData] = await Promise.all([
-            fetch(M3U_URL).then(r => r.text()),
-            fetchData(COUNTRIES_API)
-        ]);
-        
-        // 1. Crear Mapa de Países (código -> nombre)
-        countriesData.forEach(country => {
-            countryMap[country.code.toUpperCase()] = country.name;
-        });
-
-        // 2. Parseo del M3U
-        let lines = m3uText.split("\n");
-        allChannels = [];
-        const countries = new Set();
-        const categories = new Set();
-        
-        for (let i = 0; i < lines.length; i++) {
-            if (lines[i].startsWith("#EXTINF")) {
-                let extinfLine = lines[i];
-                let url = lines[i + 1] ? lines[i + 1].trim() : '';
-
-                const name = extinfLine.split(",").pop().trim();
-                const country = extractAttr(extinfLine, 'tvg-country').toUpperCase() || 'ZZ';
-                const categoryName = extractAttr(extinfLine, 'group-title') || 'Otros';
-                const logo = extractAttr(extinfLine, 'tvg-logo');
-
-                if (name && url) {
-                    allChannels.push({
-                        name,
-                        url,
-                        country,
-                        categoryName,
-                        logo
-                    });
-                    countries.add(country);
-                    categories.add(categoryName);
-                }
-            }
-        }
-        
-        if (allChannels.length === 0) {
-            list.innerHTML = `<div style="padding: 10px; color: red;">${translations[currentLang].noChannels}</div>`;
-            return;
-        }
-
-        // 3. Poblar Selector de Países
-        const optAllCountries = document.getElementById("opt-all-countries");
-        optAllCountries.value = "";
-        optAllCountries.innerText = translations[currentLang].allCountries + ` (${allChannels.length})`;
-        
-        countrySelect.innerHTML = '';
-        countrySelect.appendChild(optAllCountries);
-
-        Array.from(countries).sort().forEach(countryCode => {
-            let name = countryMap[countryCode] || countryCode;
-            let option = document.createElement("option");
-            option.value = countryCode;
-            option.innerText = name; 
-            countrySelect.appendChild(option);
-        });
-        
-        // 4. Poblar Selector de Categorías
-        const optAllCategories = document.getElementById("opt-all-categories");
-        optAllCategories.value = "";
-        optAllCategories.innerText = translations[currentLang].allCategories;
-
-        categorySelect.innerHTML = '';
-        categorySelect.appendChild(optAllCategories);
-
-        Array.from(categories).sort().forEach(categoryName => {
-            let option = document.createElement("option");
-            option.value = categoryName;
-            option.innerText = categoryName;
-            categorySelect.appendChild(option);
-        });
-
-
-        // 5. Inicialización
-        filterChannels(); 
-        setupMobileToggle();
-
-    } catch (error) {
-        console.error("Error al cargar datos:", error);
-        countrySelect.innerHTML = `<option value="">${translations[currentLang].errorLoad}</option>`;
-        categorySelect.innerHTML = `<option value="">${translations[currentLang].errorLoad}</option>`;
-        list.innerHTML = `<div style="padding: 10px; color: red;">${translations[currentLang].errorLoad}</div>`;
-    }
-}
-
-/**
- * Función UNIFICADA para filtrar canales por País, Categoría y Búsqueda.
- */
-function filterChannels() {
-    const countryCode = countrySelect.value;
-    const categoryName = categorySelect.value;
-    const searchText = searchInput.value.toLowerCase();
-    
-    let channelsToShow = allChannels.filter(channel => {
-        const matchesCountry = countryCode === '' || channel.country === countryCode;
-        const matchesCategory = categoryName === '' || channel.categoryName === categoryName;
-        const matchesSearch = channel.name.toLowerCase().includes(searchText);
-        
-        return matchesCountry && matchesCategory && matchesSearch;
-    });
-
-    renderChannels(channelsToShow);
-}
-
-/**
- * Renderiza los canales filtrados, incluyendo la lógica para el logo.
- */
-function renderChannels(channelsToShow) {
-    list.innerHTML = "";
-    channelsDOM = [];
-
-    if (channelsToShow.length === 0) {
-        list.innerHTML = `<div style="padding: 10px; color: #ffeb3b;">${translations[currentLang].errorNoFilter}</div>`;
-        return;
-    }
-
-    channelsToShow.forEach(channel => {
-        let div = document.createElement("div");
-        div.className="channel";
-        div.dataset.url = channel.url;
-        div.onclick = () => play(div);
-
-        // Integración del logo con corrección de error de carga
-        if (channel.logo) {
-            const logoHtml = `<img src="${channel.logo}" class="channel-logo" alt="${channel.name} Logo" onerror="this.style.display='none';">`;
-            const nameHtml = `<span>${channel.name}</span>`;
-            div.innerHTML = logoHtml + nameHtml;
-        } else {
-            div.innerHTML = `<span>${channel.name}</span>`;
-        }
-
-        list.appendChild(div);
-        channelsDOM.push(div);
-    });
-}
-
-
-function play(div){
-    // Ocultar la lista de canales al iniciar la reproducción en móvil
-    if (window.innerWidth < 768) {
-        leftPanel.classList.add('hidden');
-        toggleBtn.innerText = translations[currentLang].toggleOpen;
-    }
-
-    // Resaltar canal activo
-    channelsDOM.forEach(c=>c.classList.remove("active"));
-    div.classList.add("active");
-
-    var url = div.dataset.url;
-    var video = document.getElementById('video');
-
-    if (Hls.isSupported()) {
-        if(video.hls){
-             video.hls.destroy(); 
-        }
-        var hls = new Hls();
-        hls.loadSource(url);
-        hls.attachMedia(video);
-        video.hls = hls; 
-        video.play();
-    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-        video.src = url;
-        video.play();
-    } else {
-        alert("Video no compatible (HLS no soportado por este navegador).");
-    }
-}
-
-/* ------------------------------------------------------------------- */
-/* LÓGICA RESPONSIVA Y TOGGLE MÓVIL */
-/* ------------------------------------------------------------------- */
-
-function setupMobileToggle() {
-    if (window.innerWidth < 768) {
-        leftPanel.classList.add('hidden');
-        toggleBtn.innerText = translations[currentLang].toggleOpen;
-    }
-
-    toggleBtn.addEventListener('click', () => {
-        leftPanel.classList.toggle('hidden');
-        const isHidden = leftPanel.classList.contains('hidden');
-        toggleBtn.innerText = isHidden ? translations[currentLang].toggleOpen : translations[currentLang].toggleClose;
-    });
-
-    window.addEventListener('resize', () => {
-        if (window.innerWidth >= 768) {
-            toggleBtn.style.display = 'none';
-            leftPanel.classList.remove('hidden'); 
-        } else {
-            toggleBtn.style.display = 'block';
-            const isHidden = leftPanel.classList.contains('hidden');
-            toggleBtn.innerText = isHidden ? translations[currentLang].toggleOpen : translations[currentLang].toggleClose;
-        }
-    });
-}
-
-// Evento de búsqueda llama al filtro unificado
-searchInput.addEventListener("input", filterChannels);
-
-// Inicialización
-setLanguage(document.getElementById('language-select').value); // Set default language texts
+/* INIT */
+setLanguage("es");
 loadList();
 </script>
 
 </body>
 </html>
- 
