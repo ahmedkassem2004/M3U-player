@@ -32,36 +32,38 @@ body{display:flex;flex-direction:column;overflow:hidden}
 .app{display:flex;flex-direction:column;height:100vh;width:100vw;gap:0}
 
 /* Left panel */
-#left{width:100%;height:44vh;max-height:44vh;background:var(--bg-medium);border-bottom:1px solid var(--border-soft);padding:12px;overflow:hidden;transition:transform .28s;display:flex;flex-direction:column}
+#left{width:100%;height:44vh;max-height:44vh;background:var(--bg-medium);border-bottom:1px solid var(--border-soft);padding:12px;overflow:hidden;transition:transform .28s}
 #left.hidden{transform:translateY(-110%)}
 #controls-container{display:flex;flex-direction:column;gap:8px;margin-bottom:8px}
 select,input{width:100%;padding:10px;border-radius:8px;border:1px solid var(--border-soft);background:#0f1112;color:var(--text);outline:none}
-#list{
-  overflow-y:auto;
-  flex:1;
-  min-height:0;
-  padding-right:8px;
-}
+#list{overflow:auto;height:calc(100% - 150px);padding-right:8px}
 
 /* Channel items */
 .channel{display:flex;align-items:center;gap:12px;padding:10px;border-radius:8px;border-bottom:1px solid rgba(255,255,255,0.02);cursor:pointer}
 .channel:hover{background:rgba(255,255,255,0.02)}
 .channel.active{background:linear-gradient(90deg,rgba(0,188,212,0.08),rgba(0,188,212,0.03));border-left:4px solid var(--accent)}
-.channel-logo{width:36px;height:36px;border-radius:6px;flex-shrink:0;background:#0b0b0b;display:flex;align-items:center;justify-content:center;overflow:hidden;color:#ccc;font-weight:bold;font-size:14px}
+.channel-logo{width:36px;height:36px;border-radius:6px;flex-shrink:0;background:#0b0b0b;display:flex;align-items:center;justify-content:center;overflow:hidden}
 .channel-logo img{width:100%;height:100%;object-fit:contain;display:block}
 .channel-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
-/* Player */
+/* Right / player */
 #playerWrap{flex:1;background:linear-gradient(180deg,#000,#050507);display:flex;align-items:center;justify-content:center;padding:12px;position:relative}
 video{width:100%;height:100%;max-height:100%;border-radius:12px;background:#000;outline:none}
 .overlay{position:absolute;top:14px;left:14px;background:rgba(0,0,0,0.6);padding:8px 12px;border-radius:8px;display:none;color:#ffdede}
 .spinnerSmall{position:absolute;right:14px;top:14px;padding:6px 10px;border-radius:8px;background:rgba(255,255,255,0.04);color:#b6c0c7;display:none}
 
-/* Bottom menu */
+/* Fullscreen menu button */
+#fsBtn{position:absolute;bottom:18px;right:18px;background:var(--accent);border:none;color:#071018;width:52px;height:52px;border-radius:999px;font-size:20px;display:none;align-items:center;justify-content:center;cursor:pointer}
+
+/* Fullscreen floating menu */
+#fsMenu{position:absolute;bottom:82px;right:18px;background:rgba(10,10,10,0.98);padding:12px;border-radius:10px;width:280px;max-height:60vh;overflow:auto;display:none}
+.fs-search{width:100%;padding:8px;border-radius:8px;border:1px solid var(--border-soft);margin-bottom:8px;background:#0b0b0b;color:var(--text)}
+
+/* Bottom app-like menu for mobile */
 #bottomMenu{position:fixed;left:0;right:0;bottom:0;height:62px;background:linear-gradient(180deg,#0b0b0b,#0a0a0a);display:flex;align-items:center;justify-content:space-around;border-top:1px solid var(--border-soft);z-index:55}
 .menu-btn{display:flex;flex-direction:column;align-items:center;font-size:12px;color:#bfc8cc;gap:4px}
 
-/* Desktop */
+/* Responsive desktop */
 @media(min-width:900px){
   .app{flex-direction:row}
   #left{width:360px;height:100%;max-height:100%}
@@ -72,7 +74,7 @@ video{width:100%;height:100%;max-height:100%;border-radius:12px;background:#000;
 </style>
 </head>
 <body>
-<button id="toggle-list-btn">☰ Canales</button>
+<button id="toggle-list-btn" aria-label="Mostrar lista">☰ Canales</button>
 
 <div class="app" id="app">
   <aside id="left">
@@ -95,30 +97,38 @@ video{width:100%;height:100%;max-height:100%;border-radius:12px;background:#000;
       <input id="search" placeholder="Buscar canal..." />
     </div>
 
-    <div id="list"></div>
+    <div id="list" role="listbox" aria-label="Lista de canales"></div>
   </aside>
 
   <main id="playerWrap">
     <div style="width:100%;height:100%;max-width:1400px;max-height:85vh;position:relative">
       <video id="video" controls playsinline crossorigin="anonymous"></video>
-      <div id="overlay" class="overlay"></div>
-      <div id="spinner" class="spinnerSmall">Cargando…</div>
+      <div id="overlay" class="overlay" role="status" aria-hidden="true"></div>
+      <div id="spinner" class="spinnerSmall" aria-hidden="true">Cargando…</div>
+
+      <button id="fsBtn" title="Abrir lista" aria-label="Abrir lista">📺</button>
+      <div id="fsMenu" aria-hidden="true">
+        <input id="fsSearch" class="fs-search" placeholder="Buscar canal..." />
+        <div id="fsList"></div>
+      </div>
     </div>
   </main>
 </div>
 
-<nav id="bottomMenu">
+<!-- Bottom menu (mobile) -->
+<nav id="bottomMenu" aria-hidden="false">
   <div class="menu-btn" id="btn-channels">☰<span>Canales</span></div>
   <div class="menu-btn" id="btn-favs">★<span>Favoritos</span></div>
   <div class="menu-btn" id="btn-hist">⟲<span>Historial</span></div>
+  <div class="menu-btn" id="btn-settings">⚙️<span>Ajustes</span></div>
 </nav>
 
 <script>
-/* IPTV SETTINGS */
+/* ---------------------------
+   Config y elementos
+   --------------------------- */
 const M3U_URL = "https://iptv-org.github.io/iptv/index.m3u";
 const COUNTRIES_API = "https://iptv-org.github.io/api/countries.json";
-
-/* DOM */
 const video = document.getElementById('video');
 const listEl = document.getElementById('list');
 const countrySelect = document.getElementById('country-select');
@@ -128,176 +138,381 @@ const overlay = document.getElementById('overlay');
 const spinner = document.getElementById('spinner');
 const toggleBtn = document.getElementById('toggle-list-btn');
 const leftPanel = document.getElementById('left');
+const fsBtn = document.getElementById('fsBtn');
+const fsMenu = document.getElementById('fsMenu');
+const fsList = document.getElementById('fsList');
+const fsSearch = document.getElementById('fsSearch');
+const optAllCountries = document.getElementById('opt-all-countries');
+const optAllCategories = document.getElementById('opt-all-categories');
 
-/* STATE */
 let hls = null;
 let allChannels = [];
 let channelsDOM = [];
 let countriesMap = {};
+let favorites = JSON.parse(localStorage.getItem('iptv_favs')||'[]');
+let historyList = JSON.parse(localStorage.getItem('iptv_hist')||'[]');
 let currentLang = 'es';
-let favorites = [];
-let historyList = [];
 
-/* TRANSLATIONS */
+/* ---------- Internationalization (small) ---------- */
 const translations = {
   es:{ loading:"Cargando lista...", noChannels:"No se encontraron canales.", toggleOpen:"☰ Canales", toggleClose:"X Cerrar", search:"Buscar canal..." },
   en:{ loading:"Loading list...", noChannels:"No channels found.", toggleOpen:"☰ Channels", toggleClose:"X Close", search:"Search channel..." },
   pt:{ loading:"Carregando lista...", noChannels:"Nenhum canal encontrado.", toggleOpen:"☰ Canais", toggleClose:"X Fechar", search:"Pesquisar canal..." },
-  ar:{ loading:"جارٍ التحميل...", noChannels:"لم يتم العثور على القنوات.", toggleOpen:"☰ القنوات", toggleClose:"X إغلاق", search:"ابحث عن قناة..." }
+  ar:{ loading:"جارٍ التحميل...", noChannels:"لم يتم العثور على قنوات.", toggleOpen:"☰ القنوات", toggleClose:"X إغلاق", search:"ابحث عن قناة..." }
 };
 
-/* LANGUAGE */
+/* ---------- Utility ---------- */
 function setLanguage(lang){
   currentLang = lang;
-  searchInput.placeholder = translations[lang].search;
+  const t = translations[lang] || translations.es;
+  document.getElementById('app-title').innerText = (lang==='en' ? 'Modern IPTV Web Player' : 'Reproductor IPTV Web Moderno');
+  searchInput.placeholder = t.search;
+  toggleBtn.innerText = leftPanel.classList.contains('hidden') ? t.toggleOpen : t.toggleClose;
+  optAllCountries.textContent = (lang==='en'?'🌐 All Countries':'🌐 Todos los Países') + (allChannels.length?` (${allChannels.length})`:'');
+  optAllCategories.textContent = (lang==='en'?'⭐ All Categories':'⭐ Todas las Categorías');
+  // RTL for Arabic
+  document.documentElement.dir = (lang==='ar') ? 'rtl' : 'ltr';
 }
 
-/* UTILS */
-async function fetchJSON(url){ const r = await fetch(url); return r.json(); }
-function extractAttr(line,key){ const m=line.match(new RegExp(key+'="([^"]*)"')); return m?m[1]:""; }
+/* ---------- Fetch helpers ---------- */
+async function fetchJSON(url){
+  const r = await fetch(url);
+  if(!r.ok) throw new Error('Fetch failed: '+url);
+  return r.json();
+}
 
-/* LOAD LIST */
+/* ---------- Parse M3U (lightweight) ---------- */
+function extractAttr(line, key){
+  const re = new RegExp(key+'="([^"]*)"','i');
+  const m = line.match(re);
+  return m ? m[1].trim() : '';
+}
+
 async function loadList(){
   listEl.innerHTML = `<div style="padding:12px;color:var(--accent)">${translations[currentLang].loading}</div>`;
+  try{
+    const [m3uText, countriesData] = await Promise.all([
+      fetch(M3U_URL).then(r=>r.text()),
+      fetchJSON(COUNTRIES_API).catch(()=>[])
+    ]);
 
-  const [m3uText, countries] = await Promise.all([
-    fetch(M3U_URL).then(r=>r.text()),
-    fetchJSON(COUNTRIES_API)
-  ]);
+    // build country map
+    (countriesData||[]).forEach(c=>{ if(c.code) countriesMap[c.code.toUpperCase()] = c.name; });
 
-  countries.forEach(c=>countriesMap[c.code.toUpperCase()] = c.name);
+    const lines = m3uText.split(/\r?\n/);
+    allChannels = [];
+    const countries = new Set();
+    const categories = new Set();
 
-  const lines = m3uText.split("\n");
-  allChannels=[];
-  const cSet=new Set();
-  const gSet=new Set();
-
-  for(let i=0;i<lines.length;i++){
-    if(lines[i].startsWith("#EXTINF")){
-      const L=lines[i];
-      const name=L.split(",").pop().trim();
-      const url=(lines[i+1]||"").trim();
-      i++;
-      if(!name||!url) continue;
-      const logo=extractAttr(L,"tvg-logo");
-      const country=extractAttr(L,"tvg-country").toUpperCase()||"OTROS";
-      const group=extractAttr(L,"group-title")||"Otros";
-
-      allChannels.push({name,logo,url,country,group});
-      cSet.add(country);
-      gSet.add(group);
+    for(let i=0;i<lines.length;i++){
+      const L = lines[i].trim();
+      if(!L) continue;
+      if(L.startsWith('#EXTINF')){
+        const name = (L.includes(',') ? L.substring(L.indexOf(',')+1).trim() : '');
+        const logo = extractAttr(L,'tvg-logo') || extractAttr(L,'logo') || null;
+        const country = (extractAttr(L,'tvg-country') || extractAttr(L,'country') || '').toUpperCase() || 'OTROS';
+        const group = extractAttr(L,'group-title') || 'Otros';
+        // next non-empty line for URL
+        let j = i+1;
+        while(j<lines.length && !lines[j].trim()) j++;
+        const url = (lines[j]||'').trim();
+        i = j;
+        if(name && url){
+          allChannels.push({name,logo,url,country,group});
+          countries.add(country);
+          categories.add(group);
+        }
+      }
     }
+
+    if(allChannels.length===0){
+      listEl.innerHTML = `<div style="padding:12px;color:#ff6b6b">${translations[currentLang].noChannels}</div>`;
+      return;
+    }
+
+    // populate selectors
+    optAllCountries.textContent = (currentLang==='en'?'🌐 All Countries':'🌐 Todos los Países') + ` (${allChannels.length})`;
+    countrySelect.innerHTML = '';
+    countrySelect.appendChild(optAllCountries);
+    Array.from(countries).sort().forEach(c=>{
+      const o = document.createElement('option'); o.value = c; o.textContent = countriesMap[c] || c; countrySelect.appendChild(o);
+    });
+
+    optAllCategories.textContent = (currentLang==='en'?'⭐ All Categories':'⭐ Todas las Categorías');
+    categorySelect.innerHTML = '';
+    categorySelect.appendChild(optAllCategories);
+    Array.from(categories).sort().forEach(g=>{
+      const o = document.createElement('option'); o.value = g; o.textContent = g; categorySelect.appendChild(o);
+    });
+
+    renderChannels(allChannels);
+    // fill fs list (for fullscreen menu)
+    renderFsList(allChannels);
+  }catch(err){
+    console.error(err);
+    listEl.innerHTML = `<div style="padding:12px;color:#ff6b6b">Error cargando lista</div>`;
+  }
+}
+
+/* ---------- Render functions ---------- */
+function createChannelElement(ch){
+  const el = document.createElement('div');
+  el.className = 'channel';
+  el.tabIndex = 0;
+  el.dataset.url = ch.url;
+  el.dataset.name = ch.name;
+  el.dataset.country = ch.country;
+  el.dataset.group = ch.group;
+
+  const logo = document.createElement('div'); logo.className = 'channel-logo';
+  if(ch.logo){
+    const img = document.createElement('img'); img.src = ch.logo; img.alt = ch.name + ' logo';
+    img.onerror = ()=>{ img.remove(); logo.textContent = ch.name.slice(0,2).toUpperCase(); };
+    logo.appendChild(img);
+  } else {
+    logo.textContent = ch.name.slice(0,2).toUpperCase();
   }
 
-  renderList(allChannels);
-  fillFilters(cSet,gSet);
+  const name = document.createElement('div'); name.className = 'channel-name'; name.textContent = ch.name;
+
+  // click & keyboard
+  el.appendChild(logo); el.appendChild(name);
+  el.addEventListener('click', ()=>playChannel(ch,el));
+  el.addEventListener('keydown', (e)=>{ if(e.key==='Enter') playChannel(ch,el); });
+
+  return el;
 }
 
-/* FILTERS */
-function fillFilters(cSet,gSet){
-  countrySelect.innerHTML = `<option value="">🌐 Países (${allChannels.length})</option>`;
-  [...cSet].sort().forEach(c=>{
-    countrySelect.innerHTML += `<option value="${c}">${countriesMap[c]||c}</option>`;
-  });
-
-  categorySelect.innerHTML = `<option value="">⭐ Categorías</option>`;
-  [...gSet].sort().forEach(g=>{
-    categorySelect.innerHTML += `<option value="${g}">${g}</option>`;
-  });
+function renderChannels(list){
+  listEl.innerHTML = '';
+  channelsDOM = [];
+  if(!list || list.length===0){
+    listEl.innerHTML = `<div style="padding:12px;color:#ffd166">No hay canales para este filtro.</div>`;
+    return;
+  }
+  // render lightweight: avoid heavy DOM work by appending fragment
+  const frag = document.createDocumentFragment();
+  for(const ch of list){
+    const el = createChannelElement(ch);
+    frag.appendChild(el);
+    channelsDOM.push(el);
+  }
+  listEl.appendChild(frag);
 }
 
-/* SEARCH (DEBOUNCE) */
-let searchTimer=null;
-searchInput.addEventListener("input",()=>{
-  clearTimeout(searchTimer);
-  searchTimer=setTimeout(filterChannels,80);
+/* fullscreen menu list */
+function renderFsList(list){
+  fsList.innerHTML = '';
+  const frag = document.createDocumentFragment();
+  for(const ch of list){
+    const el = document.createElement('div');
+    el.style.padding = '8px'; el.style.cursor = 'pointer'; el.style.borderRadius = '6px';
+    el.textContent = ch.name;
+    el.onclick = ()=>{ playChannel(ch,null); fsMenu.style.display='none'; };
+    frag.appendChild(el);
+  }
+  fsList.appendChild(frag);
+}
+
+/* ---------- Playback: extended, multi-format, robust ---------- */
+async function playChannel(ch, el){
+  // select UI
+  channelsDOM.forEach(c=>c.classList.remove('active'));
+  if(el) el.classList.add('active');
+
+  // hide left on small screens
+  if(window.innerWidth < 900) { leftPanel.classList.add('hidden'); toggleBtn.innerText = translations[currentLang].toggleOpen || '☰ Canales'; }
+
+  // show overlay with name + logo for 3s
+  overlay.textContent = ch.name;
+  overlay.style.display = 'block';
+  overlay.setAttribute('aria-hidden','false');
+  setTimeout(()=>{ overlay.style.display = 'none'; overlay.setAttribute('aria-hidden','true'); }, 3000);
+
+  // spinner show
+  spinner.style.display = 'block';
+  spinner.setAttribute('aria-hidden','false');
+
+  // cleanup previous HLS
+  try{ if(hls){ hls.destroy(); hls = null; } }catch(e){ console.warn(e); }
+
+  // reset video element
+  try{ video.pause(); video.removeAttribute('src'); video.load(); }catch(e){}
+
+  const url = ch.url;
+
+  // Helper: try playing via <video> first for direct MP4/TS
+  function tryNativePlay(src){
+    return new Promise((resolve, reject)=>{
+      video.src = src;
+      const p = video.play();
+      if(p && p.then){
+        p.then(()=>resolve()).catch(err=>reject(err));
+      }else{
+        // older browsers
+        resolve();
+      }
+    });
+  }
+
+  // Determine probable type (best-effort)
+  const u = url.split('?')[0].toLowerCase();
+  const isM3U8 = u.endsWith('.m3u8') || u.includes('.m3u8');
+  const isMPD  = u.endsWith('.mpd') || u.includes('.mpd');
+  const isMP4  = u.endsWith('.mp4');
+  const isTS   = u.endsWith('.ts') || u.includes('.ts');
+  const isRtsp = u.startsWith('rtsp:');
+  const isRtmp = u.startsWith('rtmp:');
+
+  try{
+    // HLS streams
+    if(isM3U8){
+      if(Hls.isSupported()){
+        hls = new Hls({
+          maxBufferLength: 30,
+          enableWorker: true,
+          manifestLoadingRetryDelay: 1000,
+          fragLoadingRetryDelay: 1200
+        });
+        hls.loadSource(url);
+        hls.attachMedia(video);
+        hls.on(Hls.Events.MANIFEST_PARSED, ()=>{ spinner.style.display='none'; spinner.setAttribute('aria-hidden','true'); video.play().catch(()=>{}); });
+        hls.on(Hls.Events.ERROR, function(event, data){
+          console.warn('HLS error',data);
+          // Try native fallback if fatal
+          if(data && data.fatal){
+            try{ hls.destroy(); }catch(e){}
+            tryNativePlay(url).then(()=>{ spinner.style.display='none';}).catch(()=>{ spinner.style.display='none'; alert('No se pudo reproducir este canal (HLS).'); });
+          }
+        });
+        return;
+      } else if(video.canPlayType('application/vnd.apple.mpegurl')){
+        // Safari native
+        tryNativePlay(url).then(()=>{ spinner.style.display='none'; }).catch(()=>{ spinner.style.display='none'; alert('No se pudo reproducir (safari hls)');});
+        return;
+      }
+    }
+
+    // DASH -> not supported by default (user could request dash.js; we keep lightweight)
+    if(isMPD){
+      spinner.style.display='none';
+      alert('Este canal usa MPEG-DASH (.mpd). Requiere integración dash.js para reproducir en algunos navegadores.');
+      return;
+    }
+
+    // RTSP/RTMP cannot be played in browser directly
+    if(isRtsp || isRtmp){
+      spinner.style.display='none';
+      alert('Este stream no es reproducible directamente en navegadores (RTSP/RTMP).');
+      return;
+    }
+
+    // Try native playback for MP4/TS/others
+    await tryNativePlay(url);
+    spinner.style.display='none';
+    return;
+
+  }catch(err){
+    console.error('Playback error fallback:',err);
+    spinner.style.display='none';
+    alert('No se pudo reproducir este canal directamente (CORS/Formato/Seguridad).');
+  }
+}
+
+/* ---------- Filtering ---------- */
+function filterChannels(){
+  const country = countrySelect.value;
+  const group = categorySelect.value;
+  const q = (searchInput.value||'').toLowerCase();
+
+  const filtered = allChannels.filter(ch=>{
+    const matchCountry = !country || ch.country === country;
+    const matchGroup = !group || ch.group === group;
+    const matchQuery = !q || ch.name.toLowerCase().includes(q);
+    return matchCountry && matchGroup && matchQuery;
+  });
+
+  renderChannels(filtered);
+  renderFsList(filtered);
+}
+
+/* ---------- FS menu behaviors ---------- */
+document.addEventListener('fullscreenchange', ()=>{
+  if(document.fullscreenElement){
+    fsBtn.style.display = 'flex';
+  } else {
+    fsBtn.style.display = 'none';
+    fsMenu.style.display = 'none';
+  }
+});
+fsBtn.addEventListener('click', ()=>{ fsMenu.style.display = fsMenu.style.display==='block' ? 'none' : 'block'; });
+fsSearch.addEventListener('input', ()=> {
+  const q = fsSearch.value.toLowerCase();
+  [...fsList.children].forEach(c => c.style.display = c.textContent.toLowerCase().includes(q) ? 'block' : 'none');
 });
 
-/* FILTER CHANNELS */
-function filterChannels(){
-  const c=countrySelect.value;
-  const g=categorySelect.value;
-  const q=searchInput.value.toLowerCase();
+/* ---------- Mobile toggle ---------- */
+toggleBtn.addEventListener('click', ()=>{
+  leftPanel.classList.toggle('hidden');
+  toggleBtn.textContent = leftPanel.classList.contains('hidden') ? (translations[currentLang].toggleOpen || '☰ Canales') : (translations[currentLang].toggleClose || 'X Cerrar');
+});
 
-  const filtered=allChannels.filter(ch=>{
-    return (!c||ch.country===c)
-        &&(!g||ch.group===g)
-        &&(!q||ch.name.toLowerCase().includes(q));
-  });
+/* bottom menu (mobile) simple behaviors */
+document.getElementById('btn-channels').addEventListener('click', ()=>{ leftPanel.classList.toggle('hidden'); });
+document.getElementById('btn-favs').addEventListener('click', ()=>{ showFavorites(); });
+document.getElementById('btn-hist').addEventListener('click', ()=>{ showHistory(); });
 
-  renderList(filtered);
+function showFavorites(){
+  const favs = allChannels.filter(c=> favorites.includes(c.url));
+  renderChannels(favs);
+  renderFsList(favs);
+}
+function showHistory(){
+  const hist = historyList.map(u=> allChannels.find(c=>c.url===u)).filter(Boolean);
+  renderChannels(hist);
+  renderFsList(hist);
 }
 
-/* RENDER */
-function renderList(channels){
-  listEl.innerHTML="";
-  channelsDOM=[];
-  channels.forEach(ch=>{
-    const div=document.createElement("div");
-    div.className="channel";
-    div.dataset.url=ch.url;
-
-    const logo=document.createElement("div");
-    logo.className="channel-logo";
-    if(ch.logo){
-      const img=document.createElement("img");
-      img.src=ch.logo;
-      img.onerror=()=>{img.remove();logo.textContent=ch.name.slice(0,2);}
-      logo.appendChild(img);
-    }else logo.textContent=ch.name.slice(0,2);
-
-    const name=document.createElement("div");
-    name.className="channel-name";
-    name.textContent=ch.name;
-
-    div.appendChild(logo);
-    div.appendChild(name);
-    div.onclick=()=>playChannel(ch,div);
-
-    listEl.appendChild(div);
-    channelsDOM.push(div);
-  });
-}
-
-/* PLAY */
-async function playChannel(ch,div){
-  channelsDOM.forEach(c=>c.classList.remove("active"));
-  if(div) div.classList.add("active");
-
-  if(window.innerWidth<900){
-    leftPanel.classList.add("hidden");
-    toggleBtn.textContent = translations[currentLang].toggleOpen;
+/* ---------- Small UX: keyboard navigation ---------- */
+document.addEventListener('keydown', (e)=>{
+  if(e.key==='ArrowDown' || e.key==='ArrowUp'){
+    const visible = [...listEl.querySelectorAll('.channel')].filter(el=> el.offsetParent !== null);
+    if(!visible.length) return;
+    const idx = visible.findIndex(x => x.classList.contains('active'));
+    let next = 0;
+    if(idx===-1) next = 0;
+    else if(e.key==='ArrowDown') next = Math.min(visible.length-1, idx+1);
+    else next = Math.max(0, idx-1);
+    visible[next].focus(); visible[next].scrollIntoView({block:'center'});
   }
-
-  overlay.textContent=ch.name;
-  overlay.style.display="block";
-  setTimeout(()=>overlay.style.display="none",2500);
-
-  spinner.style.display="block";
-
-  if(hls){ hls.destroy(); hls=null; }
-  video.pause();
-
-  if(ch.url.includes(".m3u8") && Hls.isSupported()){
-    hls=new Hls();
-    hls.loadSource(ch.url);
-    hls.attachMedia(video);
-    hls.on(Hls.Events.MANIFEST_PARSED,()=>{spinner.style.display="none";video.play();});
-  }else{
-    video.src=ch.url;
-    video.onloadeddata=()=>{spinner.style.display="none";video.play();}
+  if(e.key==='Enter' && document.activeElement && document.activeElement.classList.contains('channel')){
+    document.activeElement.click();
   }
-}
+});
 
-/* MOBILE */
-toggleBtn.onclick=()=>{
-  leftPanel.classList.toggle("hidden");
-};
+/* ---------- Search listeners ---------- */
+searchInput.addEventListener('input', ()=> filterChannels());
 
-/* INIT */
-setLanguage("es");
+/* ---------- Init ---------- */
+setLanguage('es');
 loadList();
-</script>
 
+/* Register a minimal service worker for navigation offline fallback (optional) */
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=> {
+    try{
+      navigator.serviceWorker.register(URL.createObjectURL(new Blob([`
+        self.addEventListener('install', e=>self.skipWaiting());
+        self.addEventListener('fetch', e=>{
+          if(e.request.mode === 'navigate'){
+            e.respondWith(fetch(e.request).catch(()=>new Response('<h1>Sin conexión</h1>',{headers:{'Content-Type':'text/html'}})));
+          }
+        });
+      `],{type:'text/javascript'})));
+    }catch(e){ console.warn('SW register failed',e); }
+  });
+}
+</script>
 </body>
 </html>
+```0
