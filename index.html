@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title id="app-title">IPTV PLAYER</title>
 
-<!-- App icons / PWA -->
 <link rel="icon" href="https://cdn-icons-png.flaticon.com/512/633/633600.png" />
 <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/633/633600.png" />
 <meta name="theme-color" content="#121212" />
@@ -115,7 +114,6 @@ video{width:100%;height:100%;max-height:100%;border-radius:12px;background:#000;
   </main>
 </div>
 
-<!-- Bottom menu (mobile) -->
 <nav id="bottomMenu" aria-hidden="false">
   <div class="menu-btn" id="btn-channels">☰<span>Canales</span></div>
   <div class="menu-btn" id="btn-favs">★<span>Favoritos</span></div>
@@ -155,10 +153,10 @@ let currentLang = 'es';
 
 /* ---------- Internationalization (small) ---------- */
 const translations = {
-  es:{ loading:"Cargando lista...", noChannels:"No se encontraron canales.", toggleOpen:"☰ Canales", toggleClose:"X Cerrar", search:"Buscar canal..." },
-  en:{ loading:"Loading list...", noChannels:"No channels found.", toggleOpen:"☰ Channels", toggleClose:"X Close", search:"Search channel..." },
-  pt:{ loading:"Carregando lista...", noChannels:"Nenhum canal encontrado.", toggleOpen:"☰ Canais", toggleClose:"X Fechar", search:"Pesquisar canal..." },
-  ar:{ loading:"جارٍ التحميل...", noChannels:"لم يتم العثور على قنوات.", toggleOpen:"☰ القنوات", toggleClose:"X إغلاق", search:"ابحث عن قناة..." }
+  es:{ loading:"Cargando lista...", noChannels:"No se encontraron canales.", toggleOpen:"☰ Canales", toggleClose:"X Cerrar", search:"Buscar canal...", errorNative:"No se pudo reproducir este canal (Nativo)." },
+  en:{ loading:"Loading list...", noChannels:"No channels found.", toggleOpen:"☰ Channels", toggleClose:"X Close", search:"Search channel...", errorNative:"Could not play this channel (Native)." },
+  pt:{ loading:"Carregando lista...", noChannels:"Nenhum canal encontrado.", toggleOpen:"☰ Canais", toggleClose:"X Fechar", search:"Pesquisar canal...", errorNative:"Não foi possível reproduzir este canal (Nativo)." },
+  ar:{ loading:"جارٍ التحميل...", noChannels:"لم يتم العثور على قنوات.", toggleOpen:"☰ القنوات", toggleClose:"X إغلاق", search:"ابحث عن قناة...", errorNative:"تعذر تشغيل هذه القناة (أصلي)." }
 };
 
 /* ---------- Utility ---------- */
@@ -314,14 +312,16 @@ function renderFsList(list){
   fsList.appendChild(frag);
 }
 
-/* ---------- Playback: extended, multi-format, robust ---------- */
+/* ---------- Playback: extended, multi-format, robust FIX ---------- */
 async function playChannel(ch, el){
+  const t = translations[currentLang];
+  
   // select UI
   channelsDOM.forEach(c=>c.classList.remove('active'));
   if(el) el.classList.add('active');
 
   // hide left on small screens
-  if(window.innerWidth < 900) { leftPanel.classList.add('hidden'); toggleBtn.innerText = translations[currentLang].toggleOpen || '☰ Canales'; }
+  if(window.innerWidth < 900) { leftPanel.classList.add('hidden'); toggleBtn.innerText = t.toggleOpen || '☰ Canales'; }
 
   // show overlay with name + logo for 3s
   overlay.textContent = ch.name;
@@ -333,11 +333,14 @@ async function playChannel(ch, el){
   spinner.style.display = 'block';
   spinner.setAttribute('aria-hidden','false');
 
-  // cleanup previous HLS
-  try{ if(hls){ hls.destroy(); hls = null; } }catch(e){ console.warn(e); }
+  // FIX: cleanup previous HLS and video element before load
+  try{ 
+    if(hls){ hls.destroy(); hls = null; } 
+    video.pause(); 
+    video.removeAttribute('src'); 
+    video.load(); // Force reset video element
+  }catch(e){ console.warn("Cleanup failed", e); }
 
-  // reset video element
-  try{ video.pause(); video.removeAttribute('src'); video.load(); }catch(e){}
 
   const url = ch.url;
 
@@ -359,12 +362,25 @@ async function playChannel(ch, el){
   const u = url.split('?')[0].toLowerCase();
   const isM3U8 = u.endsWith('.m3u8') || u.includes('.m3u8');
   const isMPD  = u.endsWith('.mpd') || u.includes('.mpd');
-  const isMP4  = u.endsWith('.mp4');
-  const isTS   = u.endsWith('.ts') || u.includes('.ts');
   const isRtsp = u.startsWith('rtsp:');
   const isRtmp = u.startsWith('rtmp:');
 
   try{
+    // RTSP/RTMP cannot be played in browser directly
+    if(isRtsp || isRtmp){
+      spinner.style.display='none';
+      alert('Este stream no es reproducible directamente en navegadores (RTSP/RTMP).');
+      return;
+    }
+    
+    // DASH -> not supported by default (user could request dash.js; we keep lightweight)
+    if(isMPD){
+      spinner.style.display='none';
+      alert('Este canal usa MPEG-DASH (.mpd). Requiere integración dash.js para reproducir en algunos navegadores.');
+      return;
+    }
+
+
     // HLS streams
     if(isM3U8){
       if(Hls.isSupported()){
@@ -376,46 +392,43 @@ async function playChannel(ch, el){
         });
         hls.loadSource(url);
         hls.attachMedia(video);
-        hls.on(Hls.Events.MANIFEST_PARSED, ()=>{ spinner.style.display='none'; spinner.setAttribute('aria-hidden','true'); video.play().catch(()=>{}); });
+        
+        hls.on(Hls.Events.MANIFEST_PARSED, ()=>{ 
+            spinner.style.display='none'; 
+            spinner.setAttribute('aria-hidden','true'); 
+            video.play().catch(()=>{}); 
+        });
+        
+        // FIX: Error handling with fallback to native
         hls.on(Hls.Events.ERROR, function(event, data){
           console.warn('HLS error',data);
-          // Try native fallback if fatal
-          if(data && data.fatal){
+          if(data.fatal){
             try{ hls.destroy(); }catch(e){}
-            tryNativePlay(url).then(()=>{ spinner.style.display='none';}).catch(()=>{ spinner.style.display='none'; alert('No se pudo reproducir este canal (HLS).'); });
+            hls = null;
+            tryNativePlay(url)
+              .then(()=>{ spinner.style.display='none'; })
+              .catch(()=>{ spinner.style.display='none'; alert(t.errorNative); }); 
           }
         });
         return;
       } else if(video.canPlayType('application/vnd.apple.mpegurl')){
-        // Safari native
-        tryNativePlay(url).then(()=>{ spinner.style.display='none'; }).catch(()=>{ spinner.style.display='none'; alert('No se pudo reproducir (safari hls)');});
+        // Safari native HLS
+        tryNativePlay(url)
+          .then(()=>{ spinner.style.display='none'; })
+          .catch(()=>{ spinner.style.display='none'; alert(t.errorNative);});
         return;
       }
     }
 
-    // DASH -> not supported by default (user could request dash.js; we keep lightweight)
-    if(isMPD){
-      spinner.style.display='none';
-      alert('Este canal usa MPEG-DASH (.mpd). Requiere integración dash.js para reproducir en algunos navegadores.');
-      return;
-    }
-
-    // RTSP/RTMP cannot be played in browser directly
-    if(isRtsp || isRtmp){
-      spinner.style.display='none';
-      alert('Este stream no es reproducible directamente en navegadores (RTSP/RTMP).');
-      return;
-    }
-
-    // Try native playback for MP4/TS/others
+    // Fallback: Try native playback for MP4/TS/others (even if HLS failed in the HLS block)
     await tryNativePlay(url);
     spinner.style.display='none';
     return;
 
   }catch(err){
-    console.error('Playback error fallback:',err);
+    console.error('Playback error final fallback:',err);
     spinner.style.display='none';
-    alert('No se pudo reproducir este canal directamente (CORS/Formato/Seguridad).');
+    alert('No se pudo reproducir este canal (Finalizado por error de CORS/Formato/Seguridad).');
   }
 }
 
