@@ -115,6 +115,15 @@ select:focus,input:focus{
   text-overflow:ellipsis;
   color:var(--text);
 }
+/* Estilo para el botón de favorito */
+.favorite-toggle{
+  margin-left:auto;
+  cursor:pointer;
+  color:var(--accent);
+  font-size:1.2em;
+  padding-left:10px;
+  flex-shrink:0;
+}
 
 /* ----------------------------------------------------
    Right Panel (Player) - Full screen focus
@@ -146,6 +155,71 @@ video{
 #fsMenu{position:absolute;bottom:78px;right:20px;background:rgba(10,10,10,0.98);padding:10px;border-radius:6px;width:260px;max-height:60vh;overflow:auto;display:none;}
 .fs-search{background:var(--bg-medium);color:var(--text);border:none;border-radius:4px;padding:8px;}
 
+/* ----------------------------------------------------
+   NUEVO MODAL DE FAVORITOS
+   ---------------------------------------------------- */
+#favoritesModal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.9); /* Oscurece el fondo */
+    z-index: 100; /* Asegura que esté por encima de todo */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+.modal-content {
+    background: var(--bg-medium);
+    border-radius: 8px;
+    padding: 20px;
+    width: 90%;
+    max-width: 500px;
+    max-height: 90%;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    box-shadow: 0 0 20px rgba(0, 204, 255, 0.3);
+}
+.modal-content h2 {
+    color: var(--accent);
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-size: 1.5em;
+}
+#favoritesList {
+    overflow-y: auto;
+    flex-grow: 1;
+    padding-right: 10px;
+}
+#favoritesList .channel { 
+    background: var(--bg-dark);
+    margin-bottom: 8px;
+    padding: 10px 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+/* Ocultamos el icono de favorito en el modal para usar el icono de eliminar */
+#favoritesList .channel .channel-logo { display: none; }
+#favoritesList .channel .favorite-toggle { display: none; }
+
+.modal-close-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: var(--bg-dark);
+    color: var(--text);
+    border: 1px solid var(--border-soft);
+    border-radius: 4px;
+    padding: 5px 10px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 1.1em;
+    line-height: 1;
+}
 
 /* ----------------------------------------------------
    Mobile UI (Bottom Bar & Toggle Button)
@@ -166,7 +240,7 @@ video{
    ---------------------------------------------------- */
 @media(min-width:900px){
   .app{flex-direction:row}
-  
+
   /* Left panel is fixed, narrower, and uses a medium background for contrast */
   #left{
     width:300px; /* Narrower sidebar for minimalist look */
@@ -180,10 +254,10 @@ video{
   }
   #controls-container{padding-top:0} 
   #list{height:calc(100% - 190px)} 
-  
+
   /* Player is full screen in its container */
   #playerWrap{flex:1;padding:0;min-height:100vh}
-  
+
   /* Remove mobile elements */
   #toggle-list-btn{display:none}
   #bottomMenu{display:none}
@@ -222,13 +296,22 @@ video{
       <video id="video" controls playsinline crossorigin="anonymous"></video>
       <div id="overlay" class="overlay" role="status" aria-hidden="true"></div>
       <div id="spinner" class="spinnerSmall" aria-hidden="true">Cargando…</div>
-      
+
       <button id="fsBtn" title="Abrir lista" aria-label="Abrir lista">📺</button>
       <div id="fsMenu" aria-hidden="true">
         <input id="fsSearch" class="fs-search" placeholder="Buscar canal..." />
         <div id="fsList"></div>
       </div>
     </div>
+    
+    <div id="favoritesModal" style="display:none;" aria-hidden="true">
+        <div class="modal-content">
+            <h2>★ Favoritos</h2>
+            <div id="favoritesList"></div>
+            <button id="closeFavModal" class="modal-close-btn" aria-label="Cerrar favoritos">X</button>
+        </div>
+    </div>
+    
   </main>
 </div>
 
@@ -236,7 +319,6 @@ video{
   <div class="menu-btn" id="btn-channels">☰<span>Canales</span></div>
   <div class="menu-btn" id="btn-favs">★<span>Favoritos</span></div>
   <div class="menu-btn" id="btn-hist">⟲<span>Historial</span></div>
-  <div class="menu-btn" id="btn-settings">⚙️<span>Ajustes</span></div>
 </nav>
 
 <script>
@@ -260,6 +342,10 @@ const fsList = document.getElementById('fsList');
 const fsSearch = document.getElementById('fsSearch');
 const optAllCountries = document.getElementById('opt-all-countries');
 const optAllCategories = document.getElementById('opt-all-categories');
+// NEW: Favorite Modal Elements
+const favoritesModal = document.getElementById('favoritesModal');
+const favoritesListContainer = document.getElementById('favoritesList');
+
 
 let hls = null;
 let allChannels = [];
@@ -271,10 +357,22 @@ let currentLang = 'es';
 
 /* ---------- Internationalization (small) ---------- */
 const translations = {
-  es:{ loading:"Cargando lista...", noChannels:"No se encontraron canales.", toggleOpen:"☰ Canales", toggleClose:"X Cerrar", search:"Buscar canal...", errorNative:"No se pudo reproducir este canal (Nativo)." },
-  en:{ loading:"Loading list...", noChannels:"No channels found.", toggleOpen:"☰ Channels", toggleClose:"X Close", search:"Search channel...", errorNative:"Could not play this channel (Native)." },
-  pt:{ loading:"Carregando lista...", noChannels:"Nenhum canal encontrado.", toggleOpen:"☰ Canais", toggleClose:"X Fechar", search:"Pesquisar canal...", errorNative:"Não foi possível reproduzir este canal (Nativo)." },
-  ar:{ loading:"جارٍ التحميل...", noChannels:"لم يتم العثور على قنوات.", toggleOpen:"☰ القنوات", toggleClose:"X إغلاق", search:"ابحث عن قناة...", errorNative:"تعذر تشغيل هذه القناة (أصلي)." }
+  es:{ 
+    loading:"Cargando lista...", noChannels:"No se encontraron canales.", toggleOpen:"☰ Canales", toggleClose:"X Cerrar", search:"Buscar canal...", errorNative:"No se pudo reproducir este canal (Nativo).",
+    favAdd: 'Añadir a Favoritos', favRemove: 'Quitar de Favoritos'
+  },
+  en:{ 
+    loading:"Loading list...", noChannels:"No channels found.", toggleOpen:"☰ Channels", toggleClose:"X Close", search:"Search channel...", errorNative:"Could not play this channel (Native).",
+    favAdd: 'Add to Favorites', favRemove: 'Remove from Favorites'
+  },
+  pt:{ 
+    loading:"Carregando lista...", noChannels:"Nenhum canal encontrado.", toggleOpen:"☰ Canais", toggleClose:"X Fechar", search:"Pesquisar canal...", errorNative:"Não foi possível reproduzir este canal (Nativo).",
+    favAdd: 'Adicionar aos Favoritos', favRemove: 'Remover dos Favoritos'
+  },
+  ar:{ 
+    loading:"جارٍ التحميل...", noChannels:"لم يتم العثور على قنوات.", toggleOpen:"☰ القنوات", toggleClose:"X إغلاق", search:"ابحث عن قناة...", errorNative:"تعذر تشغيل هذه القناة (أصلي).",
+    favAdd: 'أضف إلى المفضلة', favRemove: 'إزالة من المفضلة'
+  }
 };
 
 /* ---------- Utility ---------- */
@@ -371,6 +469,46 @@ async function loadList(){
   }
 }
 
+/* ---------- Favorites Logic ---------- */
+function toggleFavorite(ch, starEl) {
+    const t = translations[currentLang];
+    const url = ch.url;
+    const isFav = favorites.includes(url);
+    let channelElementInMainList = null;
+
+    // Find the corresponding element in the main sidebar list
+    if(ch.name) {
+       channelElementInMainList = channelsDOM.find(el => el.dataset.url === url);
+    } else {
+        // If 'ch' is just an object with a URL (from the modal), we need to find the star element by URL
+        channelElementInMainList = channelsDOM.find(el => el.dataset.url === url);
+        if (channelElementInMainList) {
+             starEl = channelElementInMainList.querySelector('.favorite-toggle');
+        }
+    }
+
+
+    if (isFav) {
+        favorites = favorites.filter(u => u !== url);
+        if(starEl) { // Update star in the sidebar
+            starEl.innerHTML = '☆'; 
+            starEl.title = t.favAdd;
+        }
+    } else {
+        favorites.push(url);
+        if(starEl) { // Update star in the sidebar
+            starEl.innerHTML = '★'; 
+            starEl.title = t.favRemove;
+        }
+    }
+    localStorage.setItem('iptv_favs', JSON.stringify(favorites));
+
+    // If the modal is open, re-render it
+    if(favoritesModal.style.display === 'flex') {
+        showFavoritesModal();
+    }
+}
+
 /* ---------- Render functions ---------- */
 function createChannelElement(ch){
   const el = document.createElement('div');
@@ -392,8 +530,23 @@ function createChannelElement(ch){
 
   const name = document.createElement('div'); name.className = 'channel-name'; name.textContent = ch.name;
 
+  // Favorite Toggle Button (in main list)
+  const t = translations[currentLang];
+  const isFav = favorites.includes(ch.url);
+  const favBtn = document.createElement('span');
+  favBtn.className = 'favorite-toggle';
+  favBtn.innerHTML = isFav ? '★' : '☆';
+  favBtn.title = isFav ? t.favRemove : t.favAdd;
+  
+  favBtn.addEventListener('click', (e) => {
+      e.stopPropagation(); // Prevents playChannel from firing when clicking the star
+      toggleFavorite(ch, favBtn);
+  });
+  
   // click & keyboard
-  el.appendChild(logo); el.appendChild(name);
+  el.appendChild(logo); 
+  el.appendChild(name);
+  el.appendChild(favBtn); // Add the favorite button
   el.addEventListener('click', ()=>playChannel(ch,el));
   el.addEventListener('keydown', (e)=>{ if(e.key==='Enter') playChannel(ch,el); });
 
@@ -431,10 +584,95 @@ function renderFsList(list){
   fsList.appendChild(frag);
 }
 
+/* ---------- FAVORITES MODAL LOGIC (NEW) ---------- */
+function createModalChannelElement(ch) {
+    const el = document.createElement('div');
+    el.className = 'channel';
+    
+    const nameEl = document.createElement('span');
+    nameEl.className = 'channel-name';
+    nameEl.textContent = ch.name;
+    
+    const removeBtn = document.createElement('span');
+    removeBtn.textContent = '❌';
+    removeBtn.style.cursor = 'pointer';
+    removeBtn.style.marginLeft = '10px';
+    removeBtn.title = translations[currentLang].favRemove;
+    
+    // Remove from favorites handler
+    removeBtn.addEventListener('click', (e) => {
+        e.stopPropagation(); // Prevent playing channel
+        // Pass a minimal object to toggleFavorite as it expects 'ch'
+        toggleFavorite({ url: ch.url }, el); 
+        // Re-render the modal list after removal
+        showFavoritesModal();
+    });
+
+    el.appendChild(nameEl);
+    el.appendChild(removeBtn);
+    
+    // Play channel handler
+    el.addEventListener('click', () => {
+        playChannel(ch, null); // Play channel
+        favoritesModal.style.display = 'none'; // Close modal
+        favoritesModal.setAttribute('aria-hidden', 'true');
+        setActiveMenuButton(null); // Deselect button
+    });
+    return el;
+}
+
+function renderFavoritesModalList(list) {
+    favoritesListContainer.innerHTML = '';
+    if (!list || list.length === 0) {
+        favoritesListContainer.innerHTML = `<div style="padding:10px;color:var(--text-soft);">No tienes canales favoritos guardados.</div>`;
+        return;
+    }
+    
+    const frag = document.createDocumentFragment();
+    for (const ch of list) {
+        const el = createModalChannelElement(ch);
+        frag.appendChild(el);
+    }
+    favoritesListContainer.appendChild(frag);
+}
+
+function showFavoritesModal() {
+    setActiveMenuButton('btn-favs');
+    
+    // 1. Filter the favorites list
+    const favs = allChannels.filter(c => favorites.includes(c.url));
+    
+    // 2. Populate and render the modal content
+    renderFavoritesModalList(favs);
+    
+    // 3. Display the modal
+    favoritesModal.style.display = 'flex';
+    favoritesModal.setAttribute('aria-hidden', 'false');
+
+    // On mobile, ensure the left panel is hidden
+    if (window.innerWidth < 900 && leftPanel.classList.contains('active')) {
+        leftPanel.classList.remove('active');
+        toggleBtn.textContent = translations[currentLang].toggleOpen;
+        setActiveMenuButton('btn-favs'); 
+    }
+}
+/* ----------------------------------------------------------------- */
+
+
 /* ---------- Playback: M3U, M3U8, H264 Compatibility ---------- */
 async function playChannel(ch, el){
   const t = translations[currentLang];
-  
+
+  // LOGIC FOR HISTORY
+  const urlIndex = historyList.indexOf(ch.url);
+  if (urlIndex !== -1) {
+      historyList.splice(urlIndex, 1); 
+  }
+  historyList.unshift(ch.url); 
+  historyList = historyList.slice(0, 50); 
+  localStorage.setItem('iptv_hist', JSON.stringify(historyList));
+
+
   // select UI
   channelsDOM.forEach(c=>c.classList.remove('active'));
   if(el) el.classList.add('active');
@@ -507,13 +745,13 @@ async function playChannel(ch, el){
         });
         hls.loadSource(url);
         hls.attachMedia(video);
-        
+
         hls.on(Hls.Events.MANIFEST_PARSED, ()=>{ 
             spinner.style.display='none'; 
             spinner.setAttribute('aria-hidden','true'); 
             video.play().catch(()=>{}); 
         });
-        
+
         // Error handling with fallback to native
         hls.on(Hls.Events.ERROR, function(event, data){
           console.warn('HLS error',data);
@@ -566,39 +804,93 @@ function filterChannels(){
 
 /* ---------- Menu & Toggle Behaviors ---------- */
 
-/* bottom menu (mobile) simple behaviors */
+function showAllChannels() {
+    countrySelect.value = '';
+    categorySelect.value = '';
+    searchInput.value = '';
+    filterChannels(); 
+}
+
 function setActiveMenuButton(id){
     document.querySelectorAll('#bottomMenu .menu-btn').forEach(btn => btn.classList.remove('active'));
     if(id) document.getElementById(id).classList.add('active');
 }
 
+// ☰ Canales (Reloads the main list and ensures sidebar is open)
 document.getElementById('btn-channels').addEventListener('click', ()=>{ 
     const t = translations[currentLang];
-    const isActive = leftPanel.classList.toggle('active'); 
-    toggleBtn.textContent = isActive ? t.toggleClose : t.toggleOpen;
+    // Open the sidebar if closed
+    if (window.innerWidth < 900 && !leftPanel.classList.contains('active')) {
+         leftPanel.classList.add('active'); 
+         toggleBtn.textContent = t.toggleClose;
+    }
+    showAllChannels(); 
     setActiveMenuButton('btn-channels');
 });
-document.getElementById('btn-favs').addEventListener('click', ()=>{ showFavorites(); setActiveMenuButton('btn-favs'); });
-document.getElementById('btn-hist').addEventListener('click', ()=>{ showHistory(); setActiveMenuButton('btn-hist'); });
-document.getElementById('btn-settings').addEventListener('click', ()=>{ alert('Funcionalidad de ajustes aún no implementada.'); setActiveMenuButton('btn-settings'); });
 
-function showFavorites(){
-  const favs = allChannels.filter(c=> favorites.includes(c.url));
-  renderChannels(favs);
-  renderFsList(favs);
-}
+// ★ Favoritos (Opens the new modal)
+document.getElementById('btn-favs').addEventListener('click', showFavoritesModal);
+
+// ⟲ Historial (Renders in sidebar and ensures sidebar is open)
+document.getElementById('btn-hist').addEventListener('click', ()=>{ 
+    const t = translations[currentLang];
+    showHistory(); 
+    setActiveMenuButton('btn-hist'); 
+    
+    // Ensure the sidebar opens when viewing history on mobile
+    if (window.innerWidth < 900 && !leftPanel.classList.contains('active')) {
+         leftPanel.classList.add('active'); 
+         toggleBtn.textContent = t.toggleClose;
+    }
+});
+
+
 function showHistory(){
   const hist = historyList.map(u=> allChannels.find(c=>c.url===u)).filter(Boolean);
   renderChannels(hist);
   renderFsList(hist);
 }
 
-/* mobile toggle logic (uses 'active' class) */
+/* mobile toggle logic */
 toggleBtn.addEventListener('click', ()=>{
   const t = translations[currentLang];
   const isActive = leftPanel.classList.toggle('active');
   toggleBtn.textContent = isActive ? t.toggleClose : t.toggleOpen;
-  if(window.innerWidth < 900) setActiveMenuButton(isActive ? 'btn-channels' : null);
+  
+  if(window.innerWidth < 900) {
+    setActiveMenuButton(isActive ? 'btn-channels' : null);
+  } else {
+    // Desktop: ensure list shows all channels when sidebar is manipulated
+    showAllChannels();
+  }
+  
+  // If we open the sidebar, we should show the default channels list
+  if (isActive) {
+      showAllChannels();
+  }
+});
+
+/* Close modal listeners */
+document.getElementById('closeFavModal').addEventListener('click', () => {
+    favoritesModal.style.display = 'none';
+    favoritesModal.setAttribute('aria-hidden', 'true');
+    setActiveMenuButton(null); 
+});
+
+// Handle ESC key to close modal
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        if (favoritesModal.style.display === 'flex') {
+            favoritesModal.style.display = 'none';
+            favoritesModal.setAttribute('aria-hidden', 'true');
+            setActiveMenuButton(null);
+        } else if (leftPanel.classList.contains('active')) {
+             // Close sidebar too if open
+            leftPanel.classList.remove('active');
+            toggleBtn.textContent = translations[currentLang].toggleOpen;
+            setActiveMenuButton(null);
+        }
+    }
 });
 
 
@@ -621,12 +913,12 @@ fsSearch.addEventListener('input', ()=> {
 /* ---------- Small UX: keyboard navigation (TV remote simulation) ---------- */
 document.addEventListener('keydown', (e)=>{
   const isListActive = leftPanel.classList.contains('active') || (window.innerWidth >= 900);
-  
-  if((e.key==='ArrowDown' || e.key==='ArrowUp') && isListActive){
+
+  if((e.key==='ArrowDown' || e.key==='ArrowUp') && isListActive && favoritesModal.style.display !== 'flex'){
     e.preventDefault();
     const visible = [...listEl.querySelectorAll('.channel')].filter(el=> el.offsetParent !== null);
     if(!visible.length) return;
-    
+
     // Find active element, or the focused one
     let activeEl = document.activeElement;
     if(!activeEl || !activeEl.classList.contains('channel')) {
@@ -638,12 +930,12 @@ document.addEventListener('keydown', (e)=>{
     if(idx===-1) next = 0;
     else if(e.key==='ArrowDown') next = Math.min(visible.length-1, idx+1);
     else next = Math.max(0, idx-1);
-    
+
     visible[next].focus(); 
     visible[next].scrollIntoView({block:'center'});
   }
-  
-  if(e.key==='Enter' && document.activeElement && document.activeElement.classList.contains('channel')){
+
+  if(e.key==='Enter' && document.activeElement && document.activeElement.classList.contains('channel') && favoritesModal.style.display !== 'flex'){
     document.activeElement.click();
   }
 });
@@ -655,19 +947,64 @@ searchInput.addEventListener('input', ()=> filterChannels());
 setLanguage('es');
 loadList();
 
-/* Register a minimal service worker for navigation offline fallback (optional) */
+/* ---------- PWA: Service Worker Registration (Single File) ---------- */
+// Implementa la funcionalidad sin conexión (caching) de la PWA.
 if('serviceWorker' in navigator){
   window.addEventListener('load', ()=> {
+    // Contenido del Service Worker como un string.
+    const swScript = `
+      const CACHE_NAME = 'iptv-player-cache-v4';
+      const urlsToCache = [
+        './', 
+        'https://cdn.jsdelivr.net/npm/hls.js@latest' 
+      ];
+
+      self.addEventListener('install', (event) => {
+        event.waitUntil(
+          caches.open(CACHE_NAME).then((cache) => {
+            return cache.addAll(urlsToCache).catch(err => {
+              console.error('SW: Failed to cache some assets', err);
+            });
+          })
+        );
+        self.skipWaiting();
+      });
+
+      self.addEventListener('activate', (event) => {
+        event.waitUntil(
+          caches.keys().then((cacheNames) => {
+            return Promise.all(
+              cacheNames.filter(name => name !== CACHE_NAME).map(name => caches.delete(name))
+            );
+          })
+        );
+        self.clients.claim();
+      });
+
+      self.addEventListener('fetch', (event) => {
+        if (event.request.mode === 'navigate' || event.request.destination === 'script' || event.request.destination === 'style') {
+          event.respondWith(
+            caches.match(event.request).then((response) => {
+              return response || fetch(event.request).catch(() => {
+                if (event.request.mode === 'navigate') {
+                  return new Response('<h1>Sin conexión</h1><p>Esta aplicación requiere conexión a Internet para cargar los canales, pero la interfaz principal está disponible (PWA).</p>', { headers: { 'Content-Type': 'text/html' } });
+                }
+              });
+            })
+          );
+        }
+      });
+    `;
+
     try{
-      navigator.serviceWorker.register(URL.createObjectURL(new Blob([`
-        self.addEventListener('install', e=>self.skipWaiting());
-        self.addEventListener('fetch', e=>{
-          if(e.request.mode === 'navigate'){
-            e.respondWith(fetch(e.request).catch(()=>new Response('<h1>Sin conexión</h1>',{headers:{'Content-Type':'text/html'}})));
-          }
-        });
-      `],{type:'text/javascript'})));
-    }catch(e){ console.warn('SW register failed',e); }
+      const swBlob = new Blob([swScript], {type: 'application/javascript'});
+      const swUrl = URL.createObjectURL(swBlob);
+      navigator.serviceWorker.register(swUrl)
+        .then(reg => console.log('Service Worker registrado con éxito:', reg.scope))
+        .catch(err => console.error('Fallo el registro del Service Worker:', err));
+    }catch(e){ 
+      console.warn('Fallo el registro del Service Worker (Inline Blob):',e); 
+    }
   });
 }
 </script>
