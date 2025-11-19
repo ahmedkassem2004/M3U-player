@@ -7,66 +7,184 @@
 
 <link rel="icon" href="https://cdn-icons-png.flaticon.com/512/633/633600.png" />
 <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/633/633600.png" />
-<meta name="theme-color" content="#121212" />
-<link rel="manifest" href='data:application/json,{"name":"IPTV Player","short_name":"IPTV","start_url":".","display":"standalone","background_color":"#121212","theme_color":"#121212","icons":[{"src":"https://cdn-icons-png.flaticon.com/512/633/633600.png","sizes":"512x512","type":"image/png"}]}'>
+<meta name="theme-color" content="#0a0a0a" />
+<link rel="manifest" href='data:application/json,{"name":"IPTV Player","short_name":"IPTV","start_url":".","display":"standalone","background_color":"#0a0a0a","theme_color":"#0a0a0a","icons":[{"src":"https://cdn-icons-png.flaticon.com/512/633/633600.png","sizes":"512x512","type":"image/png"}]}'>
 
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 
 <style>
+/* ----------------------------------------------------
+   Variables y Reset (Cinematic TV Theme)
+   ---------------------------------------------------- */
 :root{
-  --bg-dark:#121212;
-  --bg-medium:#1f1f1f;
-  --border-soft:#2f2f2f;
-  --accent:#00bcd4;
-  --text:#eaeaea;
+  --bg-dark:#0a0a0a; /* Pure black */
+  --bg-medium:#151515; /* Background for list/controls */
+  --bg-light:#282828; /* Hover state */
+  --border-soft:#333;
+  --accent:#00ccff; /* Bright Cyan (TV menu highlight) */
+  --text:#f0f0f0;
+  --text-soft:#aaaaaa;
 }
 *{box-sizing:border-box}
-html,body{height:100%;margin:0;background:var(--bg-dark);color:var(--text);font-family:Inter,Segoe UI,Roboto,Arial,sans-serif}
+html,body{height:100%;margin:0;background:var(--bg-dark);color:var(--text);font-family:Inter,Segoe UI,Roboto,Arial,sans-serif;font-size:16px}
 body{display:flex;flex-direction:column;overflow:hidden}
-
-/* Mobile-first layout */
-#toggle-list-btn{
-  position:fixed;top:12px;right:12px;z-index:60;padding:10px 14px;background:var(--accent);color:#071018;border:none;border-radius:10px;cursor:pointer;box-shadow:0 8px 20px rgba(0,0,0,0.6)
-}
 .app{display:flex;flex-direction:column;height:100vh;width:100vw;gap:0}
 
-/* Left panel */
-#left{width:100%;height:44vh;max-height:44vh;background:var(--bg-medium);border-bottom:1px solid var(--border-soft);padding:12px;overflow:hidden;transition:transform .28s}
-#left.hidden{transform:translateY(-110%)}
-#controls-container{display:flex;flex-direction:column;gap:8px;margin-bottom:8px}
-select,input{width:100%;padding:10px;border-radius:8px;border:1px solid var(--border-soft);background:#0f1112;color:var(--text);outline:none}
-#list{overflow:auto;height:calc(100% - 150px);padding-right:8px}
+/* ----------------------------------------------------
+   Left Panel (List) - TV Sidebar/Overlay
+   ---------------------------------------------------- */
+#left{
+  width:100%;
+  height:calc(100vh - 62px); /* Mobile: Full height minus bottom menu */
+  max-height:100vh;
+  background:var(--bg-medium); /* Slightly lighter background than body */
+  padding:16px;
+  overflow:hidden;
+  transition:transform .3s ease-in-out;
+  position:fixed; 
+  top:0;
+  left:0;
+  z-index:50;
+  /* Slides in from left (TV Menu style on mobile) */
+  transform:translateX(-100%); 
+}
+#left.active{
+    transform:translateX(0); /* Show when active */
+}
 
-/* Channel items */
-.channel{display:flex;align-items:center;gap:12px;padding:10px;border-radius:8px;border-bottom:1px solid rgba(255,255,255,0.02);cursor:pointer}
-.channel:hover{background:rgba(255,255,255,0.02)}
-.channel.active{background:linear-gradient(90deg,rgba(0,188,212,0.08),rgba(0,188,212,0.03));border-left:4px solid var(--accent)}
-.channel-logo{width:36px;height:36px;border-radius:6px;flex-shrink:0;background:#0b0b0b;display:flex;align-items:center;justify-content:center;overflow:hidden}
+/* Controls Container - Minimalist look */
+#controls-container{display:flex;flex-direction:column;gap:8px;margin-bottom:12px;padding-top:40px} 
+select,input{
+  width:100%;
+  padding:10px 12px;
+  border-radius:6px;
+  border:none; /* Minimalist: remove borders */
+  background:var(--bg-dark);
+  color:var(--text);
+  outline:none;
+  transition:all .2s;
+}
+select:focus,input:focus{
+    box-shadow:0 0 0 2px var(--accent); /* Thin accent ring on focus */
+}
+
+/* List container */
+#list{overflow-y:auto;height:calc(100% - 220px);padding-right:8px}
+
+/* Channel items - TV Menu Look */
+.channel{
+  display:flex;
+  align-items:center;
+  gap:16px;
+  padding:14px 12px;
+  margin-bottom:4px; 
+  border-radius:4px; 
+  cursor:pointer;
+  background:var(--bg-medium);
+  transition:all .2s ease-out;
+  box-shadow:none;
+  border-bottom:none; /* Remove bottom border for cleaner look */
+}
+.channel:hover{
+    background:var(--bg-light); /* Subtle hover */
+}
+.channel.active{
+  background:var(--bg-light); 
+  border:1px solid var(--accent); 
+  box-shadow:0 0 10px rgba(0,204,255,0.7); /* Strong glow effect for selection */
+  font-weight:600;
+  /* Quita el color de fondo en la seleccion para un look mas limpio */
+  background:var(--bg-light); 
+  border-left:none; /* Quita el borde vertical de la versión anterior */
+}
+.channel-logo{
+  width:40px; 
+  height:40px;
+  border-radius:4px;
+  flex-shrink:0;
+  background:var(--bg-dark);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+}
 .channel-logo img{width:100%;height:100%;object-fit:contain;display:block}
-.channel-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.channel-name{
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  color:var(--text);
+}
 
-/* Right / player */
-#playerWrap{flex:1;background:linear-gradient(180deg,#000,#050507);display:flex;align-items:center;justify-content:center;padding:12px;position:relative}
-video{width:100%;height:100%;max-height:100%;border-radius:12px;background:#000;outline:none}
-.overlay{position:absolute;top:14px;left:14px;background:rgba(0,0,0,0.6);padding:8px 12px;border-radius:8px;display:none;color:#ffdede}
-.spinnerSmall{position:absolute;right:14px;top:14px;padding:6px 10px;border-radius:8px;background:rgba(255,255,255,0.04);color:#b6c0c7;display:none}
+/* ----------------------------------------------------
+   Right Panel (Player) - Full screen focus
+   ---------------------------------------------------- */
+#playerWrap{
+  flex:1;
+  background:#000; /* Pure black */
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:0; /* Maximized video space */
+  position:relative;
+  min-height:calc(100vh - 62px); 
+}
+video{
+    width:100%;
+    height:100%;
+    max-height:100vh;
+    border-radius:0; /* Full screen look */
+    background:#000;
+    outline:none;
+    box-shadow:none;
+}
+.overlay{position:absolute;top:20px;left:20px;background:rgba(0,0,0,0.6);padding:8px 12px;border-radius:4px;display:none;color:#ffeded}
+.spinnerSmall{position:absolute;right:20px;top:20px;padding:6px 10px;border-radius:4px;background:rgba(255,255,255,0.08);color:var(--text);display:none}
 
-/* Fullscreen menu button */
-#fsBtn{position:absolute;bottom:18px;right:18px;background:var(--accent);border:none;color:#071018;width:52px;height:52px;border-radius:999px;font-size:20px;display:none;align-items:center;justify-content:center;cursor:pointer}
+/* Fullscreen Button and Menu styles remain for UX */
+#fsBtn{position:absolute;bottom:20px;right:20px;background:var(--accent);border:none;color:var(--bg-dark);width:48px;height:48px;border-radius:999px;font-size:18px;display:none;align-items:center;justify-content:center;cursor:pointer;}
+#fsMenu{position:absolute;bottom:78px;right:20px;background:rgba(10,10,10,0.98);padding:10px;border-radius:6px;width:260px;max-height:60vh;overflow:auto;display:none;}
+.fs-search{background:var(--bg-medium);color:var(--text);border:none;border-radius:4px;padding:8px;}
 
-/* Fullscreen floating menu */
-#fsMenu{position:absolute;bottom:82px;right:18px;background:rgba(10,10,10,0.98);padding:12px;border-radius:10px;width:280px;max-height:60vh;overflow:auto;display:none}
-.fs-search{width:100%;padding:8px;border-radius:8px;border:1px solid var(--border-soft);margin-bottom:8px;background:#0b0b0b;color:var(--text)}
 
-/* Bottom app-like menu for mobile */
-#bottomMenu{position:fixed;left:0;right:0;bottom:0;height:62px;background:linear-gradient(180deg,#0b0b0b,#0a0a0a);display:flex;align-items:center;justify-content:space-around;border-top:1px solid var(--border-soft);z-index:55}
-.menu-btn{display:flex;flex-direction:column;align-items:center;font-size:12px;color:#bfc8cc;gap:4px}
+/* ----------------------------------------------------
+   Mobile UI (Bottom Bar & Toggle Button)
+   ---------------------------------------------------- */
+#toggle-list-btn{
+  position:fixed;top:10px;right:10px;z-index:60;padding:8px 12px;background:var(--accent);color:var(--bg-dark);border:none;border-radius:4px;cursor:pointer;font-weight:600;
+}
+#bottomMenu{
+  position:fixed;left:0;right:0;bottom:0;height:62px;
+  background:var(--bg-medium);
+  display:flex;align-items:center;justify-content:space-around;border-top:1px solid var(--border-soft);z-index:55;
+}
+.menu-btn{display:flex;flex-direction:column;align-items:center;font-size:12px;color:var(--text-soft);gap:4px;cursor:pointer}
+.menu-btn.active{color:var(--accent);font-weight:600}
 
-/* Responsive desktop */
+/* ----------------------------------------------------
+   Desktop Responsiveness (PC) - Narrower Sidebar
+   ---------------------------------------------------- */
 @media(min-width:900px){
   .app{flex-direction:row}
-  #left{width:360px;height:100%;max-height:100%}
-  #playerWrap{flex:1;padding:18px}
+  
+  /* Left panel is fixed, narrower, and uses a medium background for contrast */
+  #left{
+    width:300px; /* Narrower sidebar for minimalist look */
+    height:100%;
+    max-height:100%;
+    position:relative;
+    transform:none; /* Always visible on desktop */
+    border-right:1px solid var(--border-soft);
+    padding:16px;
+    background:var(--bg-medium);
+  }
+  #controls-container{padding-top:0} 
+  #list{height:calc(100% - 190px)} 
+  
+  /* Player is full screen in its container */
+  #playerWrap{flex:1;padding:0;min-height:100vh}
+  
+  /* Remove mobile elements */
   #toggle-list-btn{display:none}
   #bottomMenu{display:none}
 }
@@ -100,11 +218,11 @@ video{width:100%;height:100%;max-height:100%;border-radius:12px;background:#000;
   </aside>
 
   <main id="playerWrap">
-    <div style="width:100%;height:100%;max-width:1400px;max-height:85vh;position:relative">
+    <div style="width:100%;height:100%;max-width:1400px;max-height:100vh;position:relative">
       <video id="video" controls playsinline crossorigin="anonymous"></video>
       <div id="overlay" class="overlay" role="status" aria-hidden="true"></div>
       <div id="spinner" class="spinnerSmall" aria-hidden="true">Cargando…</div>
-
+      
       <button id="fsBtn" title="Abrir lista" aria-label="Abrir lista">📺</button>
       <div id="fsMenu" aria-hidden="true">
         <input id="fsSearch" class="fs-search" placeholder="Buscar canal..." />
@@ -123,7 +241,7 @@ video{width:100%;height:100%;max-height:100%;border-radius:12px;background:#000;
 
 <script>
 /* ---------------------------
-   Config y elementos
+   Configuración y elementos
    --------------------------- */
 const M3U_URL = "https://iptv-org.github.io/iptv/index.m3u";
 const COUNTRIES_API = "https://iptv-org.github.io/api/countries.json";
@@ -165,7 +283,8 @@ function setLanguage(lang){
   const t = translations[lang] || translations.es;
   document.getElementById('app-title').innerText = (lang==='en' ? 'Modern IPTV Web Player' : 'Reproductor IPTV Web Moderno');
   searchInput.placeholder = t.search;
-  toggleBtn.innerText = leftPanel.classList.contains('hidden') ? t.toggleOpen : t.toggleClose;
+  // Update toggle button text based on the new 'active' class
+  toggleBtn.innerText = leftPanel.classList.contains('active') ? t.toggleClose : t.toggleOpen;
   optAllCountries.textContent = (lang==='en'?'🌐 All Countries':'🌐 Todos los Países') + (allChannels.length?` (${allChannels.length})`:'');
   optAllCategories.textContent = (lang==='en'?'⭐ All Categories':'⭐ Todas las Categorías');
   // RTL for Arabic
@@ -229,7 +348,7 @@ async function loadList(){
     }
 
     // populate selectors
-    optAllCountries.textContent = (currentLang==='en'?'🌐 All Countries':'🌐 Todos los Países') + ` (${allChannels.length})`;
+    optAllCountries.textContent = (currentLang==='en'?'🌐 All':'🌐 Todos') + ` (${allChannels.length})`;
     countrySelect.innerHTML = '';
     countrySelect.appendChild(optAllCountries);
     Array.from(countries).sort().forEach(c=>{
@@ -312,7 +431,7 @@ function renderFsList(list){
   fsList.appendChild(frag);
 }
 
-/* ---------- Playback: extended, multi-format, robust FIX ---------- */
+/* ---------- Playback: M3U, M3U8, H264 Compatibility ---------- */
 async function playChannel(ch, el){
   const t = translations[currentLang];
   
@@ -320,10 +439,13 @@ async function playChannel(ch, el){
   channelsDOM.forEach(c=>c.classList.remove('active'));
   if(el) el.classList.add('active');
 
-  // hide left on small screens
-  if(window.innerWidth < 900) { leftPanel.classList.add('hidden'); toggleBtn.innerText = t.toggleOpen || '☰ Canales'; }
+  // hide left on small screens (TV Menu behavior)
+  if(window.innerWidth < 900) { 
+    leftPanel.classList.remove('active'); 
+    toggleBtn.innerText = t.toggleOpen || '☰ Canales'; 
+  }
 
-  // show overlay with name + logo for 3s
+  // show overlay with name for 3s
   overlay.textContent = ch.name;
   overlay.style.display = 'block';
   overlay.setAttribute('aria-hidden','false');
@@ -333,7 +455,7 @@ async function playChannel(ch, el){
   spinner.style.display = 'block';
   spinner.setAttribute('aria-hidden','false');
 
-  // FIX: cleanup previous HLS and video element before load
+  // Cleanup previous HLS and video element before load
   try{ 
     if(hls){ hls.destroy(); hls = null; } 
     video.pause(); 
@@ -344,7 +466,7 @@ async function playChannel(ch, el){
 
   const url = ch.url;
 
-  // Helper: try playing via <video> first for direct MP4/TS
+  // Helper: try playing via <video> first for direct MP4/TS/others (H264 Native support)
   function tryNativePlay(src){
     return new Promise((resolve, reject)=>{
       video.src = src;
@@ -367,21 +489,14 @@ async function playChannel(ch, el){
 
   try{
     // RTSP/RTMP cannot be played in browser directly
-    if(isRtsp || isRtmp){
+    if(isRtsp || isRtmp || isMPD){
       spinner.style.display='none';
-      alert('Este stream no es reproducible directamente en navegadores (RTSP/RTMP).');
-      return;
-    }
-    
-    // DASH -> not supported by default (user could request dash.js; we keep lightweight)
-    if(isMPD){
-      spinner.style.display='none';
-      alert('Este canal usa MPEG-DASH (.mpd). Requiere integración dash.js para reproducir en algunos navegadores.');
+      alert('Este stream no es reproducible directamente en navegadores (RTSP/RTMP/DASH).');
       return;
     }
 
 
-    // HLS streams
+    // HLS streams (m3u8) - Supports H264 over TS/fMP4
     if(isM3U8){
       if(Hls.isSupported()){
         hls = new Hls({
@@ -399,7 +514,7 @@ async function playChannel(ch, el){
             video.play().catch(()=>{}); 
         });
         
-        // FIX: Error handling with fallback to native
+        // Error handling with fallback to native
         hls.on(Hls.Events.ERROR, function(event, data){
           console.warn('HLS error',data);
           if(data.fatal){
@@ -420,7 +535,7 @@ async function playChannel(ch, el){
       }
     }
 
-    // Fallback: Try native playback for MP4/TS/others (even if HLS failed in the HLS block)
+    // Fallback: Try native playback for other streams (M3U, MP4, TS)
     await tryNativePlay(url);
     spinner.style.display='none';
     return;
@@ -428,7 +543,7 @@ async function playChannel(ch, el){
   }catch(err){
     console.error('Playback error final fallback:',err);
     spinner.style.display='none';
-    alert('No se pudo reproducir este canal (Finalizado por error de CORS/Formato/Seguridad).');
+    alert('No se pudo reproducir este canal (Error de CORS/Formato/Seguridad).');
   }
 }
 
@@ -449,6 +564,44 @@ function filterChannels(){
   renderFsList(filtered);
 }
 
+/* ---------- Menu & Toggle Behaviors ---------- */
+
+/* bottom menu (mobile) simple behaviors */
+function setActiveMenuButton(id){
+    document.querySelectorAll('#bottomMenu .menu-btn').forEach(btn => btn.classList.remove('active'));
+    if(id) document.getElementById(id).classList.add('active');
+}
+
+document.getElementById('btn-channels').addEventListener('click', ()=>{ 
+    const t = translations[currentLang];
+    const isActive = leftPanel.classList.toggle('active'); 
+    toggleBtn.textContent = isActive ? t.toggleClose : t.toggleOpen;
+    setActiveMenuButton('btn-channels');
+});
+document.getElementById('btn-favs').addEventListener('click', ()=>{ showFavorites(); setActiveMenuButton('btn-favs'); });
+document.getElementById('btn-hist').addEventListener('click', ()=>{ showHistory(); setActiveMenuButton('btn-hist'); });
+document.getElementById('btn-settings').addEventListener('click', ()=>{ alert('Funcionalidad de ajustes aún no implementada.'); setActiveMenuButton('btn-settings'); });
+
+function showFavorites(){
+  const favs = allChannels.filter(c=> favorites.includes(c.url));
+  renderChannels(favs);
+  renderFsList(favs);
+}
+function showHistory(){
+  const hist = historyList.map(u=> allChannels.find(c=>c.url===u)).filter(Boolean);
+  renderChannels(hist);
+  renderFsList(hist);
+}
+
+/* mobile toggle logic (uses 'active' class) */
+toggleBtn.addEventListener('click', ()=>{
+  const t = translations[currentLang];
+  const isActive = leftPanel.classList.toggle('active');
+  toggleBtn.textContent = isActive ? t.toggleClose : t.toggleOpen;
+  if(window.innerWidth < 900) setActiveMenuButton(isActive ? 'btn-channels' : null);
+});
+
+
 /* ---------- FS menu behaviors ---------- */
 document.addEventListener('fullscreenchange', ()=>{
   if(document.fullscreenElement){
@@ -464,40 +617,32 @@ fsSearch.addEventListener('input', ()=> {
   [...fsList.children].forEach(c => c.style.display = c.textContent.toLowerCase().includes(q) ? 'block' : 'none');
 });
 
-/* ---------- Mobile toggle ---------- */
-toggleBtn.addEventListener('click', ()=>{
-  leftPanel.classList.toggle('hidden');
-  toggleBtn.textContent = leftPanel.classList.contains('hidden') ? (translations[currentLang].toggleOpen || '☰ Canales') : (translations[currentLang].toggleClose || 'X Cerrar');
-});
 
-/* bottom menu (mobile) simple behaviors */
-document.getElementById('btn-channels').addEventListener('click', ()=>{ leftPanel.classList.toggle('hidden'); });
-document.getElementById('btn-favs').addEventListener('click', ()=>{ showFavorites(); });
-document.getElementById('btn-hist').addEventListener('click', ()=>{ showHistory(); });
-
-function showFavorites(){
-  const favs = allChannels.filter(c=> favorites.includes(c.url));
-  renderChannels(favs);
-  renderFsList(favs);
-}
-function showHistory(){
-  const hist = historyList.map(u=> allChannels.find(c=>c.url===u)).filter(Boolean);
-  renderChannels(hist);
-  renderFsList(hist);
-}
-
-/* ---------- Small UX: keyboard navigation ---------- */
+/* ---------- Small UX: keyboard navigation (TV remote simulation) ---------- */
 document.addEventListener('keydown', (e)=>{
-  if(e.key==='ArrowDown' || e.key==='ArrowUp'){
+  const isListActive = leftPanel.classList.contains('active') || (window.innerWidth >= 900);
+  
+  if((e.key==='ArrowDown' || e.key==='ArrowUp') && isListActive){
+    e.preventDefault();
     const visible = [...listEl.querySelectorAll('.channel')].filter(el=> el.offsetParent !== null);
     if(!visible.length) return;
-    const idx = visible.findIndex(x => x.classList.contains('active'));
+    
+    // Find active element, or the focused one
+    let activeEl = document.activeElement;
+    if(!activeEl || !activeEl.classList.contains('channel')) {
+        activeEl = listEl.querySelector('.channel.active') || visible[0];
+    }
+
+    const idx = visible.findIndex(x => x === activeEl);
     let next = 0;
     if(idx===-1) next = 0;
     else if(e.key==='ArrowDown') next = Math.min(visible.length-1, idx+1);
     else next = Math.max(0, idx-1);
-    visible[next].focus(); visible[next].scrollIntoView({block:'center'});
+    
+    visible[next].focus(); 
+    visible[next].scrollIntoView({block:'center'});
   }
+  
   if(e.key==='Enter' && document.activeElement && document.activeElement.classList.contains('channel')){
     document.activeElement.click();
   }
