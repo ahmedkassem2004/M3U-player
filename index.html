@@ -388,8 +388,8 @@ const optAllCategories = document.getElementById('opt-all-categories');
 const favoritesModal = document.getElementById('favoritesModal');
 const favoritesListContainer = document.getElementById('favoritesList');
 const installModal = document.getElementById('installModal');
-const settingsModal = document.getElementById('settingsModal'); // NUEVO
-const lightModeToggle = document.getElementById('lightModeToggle'); // NUEVO
+const settingsModal = document.getElementById('settingsModal'); 
+const lightModeToggle = document.getElementById('lightModeToggle'); 
 
 // Variables de estado
 let hls = null;
@@ -407,7 +407,7 @@ let installModalShown = localStorage.getItem('pwa_install_shown') === 'true';
 const translations = {
   es:{ 
     loading:"Cargando lista...", noChannels:"No se encontraron canales.", toggleOpen:"☰ Canales", toggleClose:"X Cerrar", search:"Buscar canal...", errorNative:"No se pudo reproducir este canal (Nativo).",
-    favAdd: 'Añadir a Favoritos', favRemove: 'Quitar de Favoritos', errorFatal: 'Error Fatal: No se pudo cargar el stream.'
+    favAdd: 'Añadir a Favoritos', favRemove: 'Quitar de Favoritos', errorFatal: 'Error Fatal: No se pudo cargar el stream.' // Mensaje de error más específico en la UI (aunque intentamos evitarlo)
   },
   en:{ 
     loading:"Loading list...", noChannels:"No channels found.", toggleOpen:"☰ Channels", toggleClose:"X Close", search:"Search channel...", errorNative:"Could not play this channel (Native).",
@@ -436,7 +436,7 @@ function setLanguage(lang){
 }
 
 /* ----------------------------------------------------
-   NUEVO: Lógica de Modo Claro/Oscuro
+   Lógica de Modo Claro/Oscuro
    ---------------------------------------------------- */
 function toggleLightMode() {
     const isLight = body.classList.toggle('light-mode');
@@ -720,7 +720,9 @@ function showFavoritesModal() {
     }
 }
 
-/* ---------- Playback: HLS with Robust Error Handling (Logic unchanged) ---------- */
+/* --------------------------------------------------------------------------------------
+   Playback: HLS with Robust Error Handling (MODIFICADO para manejar el error CORS/Fatal)
+   -------------------------------------------------------------------------------------- */
 async function playChannel(ch, el){
   const t = translations[currentLang];
 
@@ -744,7 +746,8 @@ async function playChannel(ch, el){
   overlay.textContent = ch.name;
   overlay.style.display = 'block';
   overlay.setAttribute('aria-hidden','false');
-  setTimeout(()=>{ overlay.style.display = 'none'; overlay.setAttribute('aria-hidden','true'); }, 3000);
+  // Dejar el overlay visible si hay un error
+  // setTimeout(()=>{ overlay.style.display = 'none'; overlay.setAttribute('aria-hidden','true'); }, 3000);
 
   spinner.style.display = 'block';
   spinner.setAttribute('aria-hidden','false');
@@ -767,6 +770,7 @@ async function playChannel(ch, el){
       if(p && p.then){
         p.then(()=>resolve()).catch(err=>reject(err));
       }else{
+        // En algunos entornos el play es sincrónico
         resolve();
       }
     });
@@ -789,12 +793,22 @@ async function playChannel(ch, el){
             setTimeout(() => playChannel(ch, el), 1000); 
         }
       } else {
-        console.error('HLS error fatal después de reintentos. Intentando fallback nativo.');
-        try{ hls.destroy(); }catch(e){}
+        // *** CAMBIO CLAVE AQUÍ: Cuando HLS.js falla fatalmente (por CORS), ***
+        // *** intentamos el fallback nativo sin mostrar la alerta de error fatal. ***
+        console.error('HLS error fatal después de reintentos. Intentando fallback nativo como último recurso.');
+        try{ if(hls) hls.destroy(); }catch(e){}
         hls = null;
         tryNativePlay(url)
-          .then(()=>{ spinner.style.display='none'; })
-          .catch(()=>{ spinner.style.display='none'; alert(t.errorFatal); }); 
+          .then(()=>{ 
+            spinner.style.display='none'; 
+            overlay.style.display='none'; // Ocultar si funciona
+          })
+          .catch(()=>{ 
+            spinner.style.display='none'; 
+            // Si el nativo también falla (ej. por MIME type no soportado)
+            alert(t.errorFatal); 
+            overlay.style.display='none';
+          }); 
       }
     }
   }
@@ -809,6 +823,7 @@ async function playChannel(ch, el){
   try{
     if(isRtsp || isRtmp || isMPD){
       spinner.style.display='none';
+      overlay.style.display='none';
       alert('Este stream no es reproducible directamente en navegadores (RTSP/RTMP/DASH).');
       return;
     }
@@ -819,7 +834,10 @@ async function playChannel(ch, el){
           maxBufferLength: 30,
           enableWorker: true,
           manifestLoadingRetryDelay: 1000,
-          fragLoadingRetryDelay: 1200
+          fragLoadingRetryDelay: 1200,
+          // Añadir esta cabecera CORS en la solicitud es inútil, 
+          // debe ser respondida por el servidor de origen
+          // xhrSetup: (xhr, url) => { xhr.withCredentials = true; } 
         });
         hls.loadSource(url);
         hls.attachMedia(video);
@@ -827,6 +845,7 @@ async function playChannel(ch, el){
         hls.on(Hls.Events.MANIFEST_PARSED, ()=>{ 
             spinner.style.display='none'; 
             spinner.setAttribute('aria-hidden','true'); 
+            overlay.style.display='none'; // Ocultar overlay si hay éxito
             video.play().catch(()=>{}); 
         });
         
@@ -834,9 +853,10 @@ async function playChannel(ch, el){
 
         return;
       } else if(video.canPlayType('application/vnd.apple.mpegurl')){
+        // Intenta reproducción nativa si HLS.js no está soportado (ej. Safari)
         tryNativePlay(url)
-          .then(()=>{ spinner.style.display='none'; })
-          .catch(()=>{ spinner.style.display='none'; alert(t.errorNative);});
+          .then(()=>{ spinner.style.display='none'; overlay.style.display='none'; })
+          .catch(()=>{ spinner.style.display='none'; overlay.style.display='none'; alert(t.errorNative);});
         return;
       }
     }
@@ -844,11 +864,13 @@ async function playChannel(ch, el){
     // Fallback: Try native playback for other streams (M3U, MP4, TS)
     await tryNativePlay(url);
     spinner.style.display='none';
+    overlay.style.display='none';
     return;
 
   }catch(err){
     console.error('Playback error final fallback:',err);
     spinner.style.display='none';
+    overlay.style.display='none';
     alert('No se pudo reproducir este canal (Error de CORS/Formato/Seguridad).');
   }
 }
@@ -957,7 +979,7 @@ document.addEventListener('keydown', (e) => {
             favoritesModal.style.display = 'none';
             favoritesModal.setAttribute('aria-hidden', 'true');
             setActiveMenuButton(null);
-        } else if (settingsModal.style.display === 'flex') { // NUEVO: Cerrar ajustes
+        } else if (settingsModal.style.display === 'flex') { // Cerrar ajustes
             settingsModal.style.display = 'none';
             settingsModal.setAttribute('aria-hidden', 'true');
             setActiveMenuButton(null);
@@ -1028,7 +1050,7 @@ document.getElementById('btn-install-no').addEventListener('click', hideInstallM
 
 /* ---------- Init ---------- */
 setLanguage('es');
-initializeTheme(); // NUEVO: Inicializar el tema
+initializeTheme(); // Inicializar el tema
 loadList();
 
 /* ---------- PWA: Service Worker Registration (Logic unchanged) ---------- */
