@@ -5,10 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title id="app-title">IPTV PLAYER</title>
 
-<link rel="icon" href="https://cdn-icons-png.flaticon.com/512/633/633600.png" />
-<link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/633/633600.png" />
+<link rel="icon" href="https://cdn-icons-png.flaticon.com/512/4607/4607871.png" />
+<link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/4607/4607871.png" />
 <meta name="theme-color" content="#0a0a0a" />
-<link rel="manifest" href='data:application/json,{"name":"IPTV Player","short_name":"IPTV","start_url":".","display":"standalone","background_color":"#0a0a0a","theme_color":"#0a0a0a","icons":[{"src":"https://cdn-icons-png.flaticon.com/512/633/633600.png","sizes":"512x512","type":"image/png"}]}'>
+<link rel="manifest" href='data:application/json,{"name":"IPTV Player","short_name":"IPTV","start_url":".","display":"standalone","background_color":"#0a0a0a","theme_color":"#0a0a0a","icons":[{"src":"https://cdn-icons-png.flaticon.com/512/4607/4607871.png","sizes":"512x512","type":"image/png"}]}'>
 
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 
@@ -69,7 +69,7 @@ select:focus,input:focus{
 }
 
 /* List container */
-#list{overflow-y:auto;height:calc(100% - 220px);padding-right:8px}
+#list{overflow-y:auto;height:calc(100% - 190px);padding-right:8px} 
 
 /* Channel items - TV Menu Look */
 .channel{
@@ -303,7 +303,7 @@ video{
         <div id="fsList"></div>
       </div>
     </div>
-    
+
     <div id="favoritesModal" style="display:none;" aria-hidden="true">
         <div class="modal-content">
             <h2>★ Favoritos</h2>
@@ -311,7 +311,7 @@ video{
             <button id="closeFavModal" class="modal-close-btn" aria-label="Cerrar favoritos">X</button>
         </div>
     </div>
-    
+
   </main>
 </div>
 
@@ -325,6 +325,7 @@ video{
 /* ---------------------------
    Configuración y elementos
    --------------------------- */
+// Base de datos de IPTV Org
 const M3U_URL = "https://iptv-org.github.io/iptv/index.m3u";
 const COUNTRIES_API = "https://iptv-org.github.io/api/countries.json";
 const video = document.getElementById('video');
@@ -537,12 +538,12 @@ function createChannelElement(ch){
   favBtn.className = 'favorite-toggle';
   favBtn.innerHTML = isFav ? '★' : '☆';
   favBtn.title = isFav ? t.favRemove : t.favAdd;
-  
+
   favBtn.addEventListener('click', (e) => {
       e.stopPropagation(); // Prevents playChannel from firing when clicking the star
       toggleFavorite(ch, favBtn);
   });
-  
+
   // click & keyboard
   el.appendChild(logo); 
   el.appendChild(name);
@@ -588,17 +589,17 @@ function renderFsList(list){
 function createModalChannelElement(ch) {
     const el = document.createElement('div');
     el.className = 'channel';
-    
+
     const nameEl = document.createElement('span');
     nameEl.className = 'channel-name';
     nameEl.textContent = ch.name;
-    
+
     const removeBtn = document.createElement('span');
     removeBtn.textContent = '❌';
     removeBtn.style.cursor = 'pointer';
     removeBtn.style.marginLeft = '10px';
     removeBtn.title = translations[currentLang].favRemove;
-    
+
     // Remove from favorites handler
     removeBtn.addEventListener('click', (e) => {
         e.stopPropagation(); // Prevent playing channel
@@ -610,7 +611,7 @@ function createModalChannelElement(ch) {
 
     el.appendChild(nameEl);
     el.appendChild(removeBtn);
-    
+
     // Play channel handler
     el.addEventListener('click', () => {
         playChannel(ch, null); // Play channel
@@ -627,7 +628,7 @@ function renderFavoritesModalList(list) {
         favoritesListContainer.innerHTML = `<div style="padding:10px;color:var(--text-soft);">No tienes canales favoritos guardados.</div>`;
         return;
     }
-    
+
     const frag = document.createDocumentFragment();
     for (const ch of list) {
         const el = createModalChannelElement(ch);
@@ -638,13 +639,13 @@ function renderFavoritesModalList(list) {
 
 function showFavoritesModal() {
     setActiveMenuButton('btn-favs');
-    
+
     // 1. Filter the favorites list
     const favs = allChannels.filter(c => favorites.includes(c.url));
-    
+
     // 2. Populate and render the modal content
     renderFavoritesModalList(favs);
-    
+
     // 3. Display the modal
     favoritesModal.style.display = 'flex';
     favoritesModal.setAttribute('aria-hidden', 'false');
@@ -836,7 +837,7 @@ document.getElementById('btn-hist').addEventListener('click', ()=>{
     const t = translations[currentLang];
     showHistory(); 
     setActiveMenuButton('btn-hist'); 
-    
+
     // Ensure the sidebar opens when viewing history on mobile
     if (window.innerWidth < 900 && !leftPanel.classList.contains('active')) {
          leftPanel.classList.add('active'); 
@@ -856,14 +857,14 @@ toggleBtn.addEventListener('click', ()=>{
   const t = translations[currentLang];
   const isActive = leftPanel.classList.toggle('active');
   toggleBtn.textContent = isActive ? t.toggleClose : t.toggleOpen;
-  
+
   if(window.innerWidth < 900) {
     setActiveMenuButton(isActive ? 'btn-channels' : null);
   } else {
     // Desktop: ensure list shows all channels when sidebar is manipulated
     showAllChannels();
   }
-  
+
   // If we open the sidebar, we should show the default channels list
   if (isActive) {
       showAllChannels();
@@ -1010,4 +1011,3 @@ if('serviceWorker' in navigator){
 </script>
 </body>
 </html>
- 
