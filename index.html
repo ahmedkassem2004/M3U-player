@@ -1,1117 +1,176 @@
-<!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title id="app-title">IPTV PLAYER</title>
+  <meta charset="UTF-8" />
+  <title id="app-title">IPTV PLAYER</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-<!-- ICONO y MANIFEST para PWA -->
-<link rel="icon" href="https://cdn-icons-png.flaticon.com/512/4607/4607871.png" />
-<link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/4607/4607871.png" />
-<meta name="theme-color" content="#0a0a0a" />
-<link rel="manifest" href='data:application/json,{"name":"IPTV Player","short_name":"IPTV","start_url":".","display":"standalone","background_color":"#0a0a0a","theme_color":"#0a0a0a","icons":[{"src":"https://cdn-icons-png.flaticon.com/512/4607/4607871.png","sizes":"512x512","type":"image/png"}]}'>
+  <!-- ICONO y MANIFEST para PWA -->
+  <link rel="icon" href="https://cdn-icons-png.flaticon.com/512/4607/4607871.png" />
+  <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/4607/4607871.png" />
+  <meta name="theme-color" content="#0a0a0a" />
+  <link rel="manifest" href='data:application/json,{ "name":"IPTV Player","short_name":"IPTV","start_url":".","display":"standalone","background_color":"#0a0a0a","theme_color":"#0a0a0a","icons":[{"src":"https://cdn-icons-png.flaticon.com/512/4607/4607871.png","sizes":"512x512","type":"image/png"}]}'>
 
-<!-- HLS.js Library para reproducir streams M3U8 en todos los navegadores -->
-<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <!-- HLS.js para M3U8 -->
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 
-<style>
-/* ----------------------------------------------------
-   Variables y Reset (Modo Oscuro Predeterminado)
-   ---------------------------------------------------- */
-:root{
-  --bg-dark:#0a0a0a;
-  --bg-medium:#151515;
-  --bg-light:#282828;
-  --border-soft:#333;
-  --accent:#ff4444; /* Rojo */
-  --text:#f0f0f0;
-  --text-soft:#aaaaaa;
-}
-
-/* ----------------------------------------------------
-   Variables para MODO CLARO
-   ---------------------------------------------------- */
-body.light-mode {
-  --bg-dark:#f0f0f0;    /* Fondo principal blanco/claro */
-  --bg-medium:#ffffff;  /* Paneles blancos */
-  --bg-light:#e0e0e0;   /* Hover/Activo */
-  --border-soft:#ccc;   /* Borde suave gris */
-  --accent:#007bff;     /* Azul de acento para el modo claro */
-  --text:#111111;       /* Texto negro */
-  --text-soft:#555555;  /* Texto suave gris oscuro */
-}
-
-/* Reset y Layout General */
-*{box-sizing:border-box}
-html,body{height:100%;margin:0;font-family:Inter,Segoe UI,Roboto,Arial,sans-serif;font-size:16px}
-body{
-  display:flex;
-  flex-direction:column;
-  overflow:hidden;
-  background:var(--bg-dark); /* Usa la variable de fondo */
-  color:var(--text);         /* Usa la variable de texto */
-  transition:background-color 0.3s, color 0.3s;
-}
-.app{display:flex;flex-direction:column;height:100vh;width:100vw;gap:0}
-
-/* ----------------------------------------------------
-   Left Panel (List) - Sidebar
-   ---------------------------------------------------- */
-#left{
-  width:100%;
-  height:calc(100vh - 62px); 
-  max-height:100vh;
-  background:var(--bg-medium);
-  padding:16px;
-  overflow:hidden;
-  transition:transform .3s ease-in-out, background-color 0.3s;
-  position:fixed; 
-  top:0;
-  left:0;
-  z-index:50;
-  transform:translateX(-100%); 
-  color:var(--text);
-}
-#left.active{
-    transform:translateX(0);
-}
-
-/* Controls Container */
-#controls-container{display:flex;flex-direction:column;gap:8px;margin-bottom:12px;padding-top:40px} 
-select,input{
-  width:100%;
-  padding:10px 12px;
-  border-radius:6px;
-  border:1px solid var(--border-soft);
-  background:var(--bg-dark);
-  color:var(--text);
-  outline:none;
-  transition:all .2s;
-}
-select:focus,input:focus{
-    box-shadow:0 0 0 2px var(--accent);
-}
-
-/* List container */
-#list{overflow-y:auto;height:calc(100% - 190px);padding-right:8px} 
-
-/* Channel items */
-.channel{
-  display:flex;
-  align-items:center;
-  gap:16px;
-  padding:14px 12px;
-  margin-bottom:4px; 
-  border-radius:4px; 
-  cursor:pointer;
-  background:var(--bg-medium);
-  transition:all .2s ease-out;
-}
-.channel:hover{
-    background:var(--bg-light);
-}
-.channel.active{
-  background:var(--bg-light); 
-  border:1px solid var(--accent); 
-  box-shadow:0 0 10px var(--accent-shadow, rgba(255, 68, 68, 0.7)); 
-  font-weight:600;
-}
-.channel-logo{
-  width:40px; height:40px; border-radius:4px; flex-shrink:0;
-  background:var(--bg-dark);
-  display:flex; align-items:center; justify-content:center;
-  overflow:hidden;
-  color:var(--text);
-}
-.channel-logo img{width:100%;height:100%;object-fit:contain;display:block}
-.channel-name{
-  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-  color:var(--text);
-}
-.favorite-toggle{
-  margin-left:auto; cursor:pointer;
-  color:var(--accent);
-  font-size:1.2em; padding-left:10px; flex-shrink:0;
-}
-
-/* ----------------------------------------------------
-   Right Panel (Player)
-   ---------------------------------------------------- */
-#playerWrap{
-  flex:1; background:#000; display:flex;
-  align-items:center; justify-content:center; padding:0;
-  position:relative; min-height:calc(100vh - 62px); 
-}
-video{
-    width:100%; height:100%; max-height:100vh;
-    border-radius:0; background:#000; outline:none; box-shadow:none;
-}
-.overlay{position:absolute;top:20px;left:20px;background:rgba(0,0,0,0.6);padding:8px 12px;border-radius:4px;display:none;color:#ffeded}
-.spinnerSmall{position:absolute;right:20px;top:20px;padding:6px 10px;border-radius:4px;background:rgba(255,255,255,0.08);color:var(--text);display:none}
-
-/* Fullscreen Button and Menu styles */
-#fsBtn{position:absolute;bottom:20px;right:20px;background:var(--accent);border:none;color:var(--bg-dark);width:48px;height:48px;border-radius:999px;font-size:18px;display:none;align-items:center;justify-content:center;cursor:pointer;}
-#fsMenu{position:absolute;bottom:78px;right:20px;background:var(--bg-medium);padding:10px;border-radius:6px;width:260px;max-height:60vh;overflow:auto;display:none; border:1px solid var(--border-soft);}
-.fs-search{background:var(--bg-dark);color:var(--text);border:1px solid var(--border-soft);border-radius:4px;padding:8px;}
-
-/* Modales */
-.modal-overlay{
-    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.9); z-index: 100; display: none; align-items: center; justify-content: center; padding: 20px;
-}
-.modal-content {
-    background: var(--bg-medium); border-radius: 8px; padding: 20px; width: 90%; max-width: 500px; max-height: 90%; display: flex; flex-direction: column; position: relative; 
-    box-shadow: 0 0 20px var(--accent-shadow, rgba(255, 68, 68, 0.3));
-    color: var(--text); border:1px solid var(--border-soft);
-}
-.modal-content h2 { color: var(--accent); margin-top: 0; margin-bottom: 15px; font-size: 1.5em;}
-.modal-close-btn { position: absolute; top: 10px; right: 10px; background: var(--bg-dark); color: var(--text); border: 1px solid var(--border-soft); border-radius: 4px; padding: 5px 10px; cursor: pointer; font-weight: bold; font-size: 1.1em; line-height: 1;}
-
-/* Favoritos y Listas dentro del Modal */
-#favoritesList, #settingsContent { overflow-y: auto; flex-grow: 1; padding-right: 10px;}
-#favoritesList .channel { background: var(--bg-dark); margin-bottom: 8px; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center;}
-#favoritesList .channel .channel-logo, #favoritesList .channel .favorite-toggle { display: none; }
-
-/* Modal de Instalación PWA (Mantiene el rojo intenso para destacar) */
-#installModal{ z-index: 150; }
-.install-modal-content {
-    background: var(--bg-medium); border-radius: 8px; padding: 30px; width: 90%; max-width: 400px; text-align: center;
-    box-shadow: 0 0 25px rgba(255, 68, 68, 0.7); /* Mantiene el brillo rojo */
-    color: var(--text); border:1px solid var(--border-soft);
-}
-.install-modal-content h3 { color: #ff4444; margin-top: 0; font-size: 1.6em; } /* Color fijo rojo */
-#btn-install-yes { background: #ff4444; color: var(--bg-dark); }
-#btn-install-no { background: var(--bg-light); color: var(--text); border: 1px solid var(--border-soft); }
-
-/* ----------------------------------------------------
-   NUEVO: Estilos para el Switch de Modo Oscuro
-   ---------------------------------------------------- */
-.settings-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px 0;
-    border-bottom: 1px solid var(--border-soft);
-}
-.settings-item:last-child {
-    border-bottom: none;
-}
-.switch {
-  position: relative;
-  display: inline-block;
-  width: 50px;
-  height: 28px;
-}
-.switch input {opacity: 0; width: 0; height: 0;}
-.slider {
-  position: absolute;
-  cursor: pointer;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: var(--border-soft);
-  transition: .4s;
-  border-radius: 28px;
-}
-.slider:before {
-  position: absolute;
-  content: "";
-  height: 20px;
-  width: 20px;
-  left: 4px;
-  bottom: 4px;
-  background-color: var(--bg-dark); /* Color del círculo */
-  transition: .4s;
-  border-radius: 50%;
-}
-input:checked + .slider {
-  background-color: var(--accent);
-}
-input:checked + .slider:before {
-  transform: translateX(22px);
-  background-color: var(--text); /* Círculo claro cuando está encendido */
-}
-
-
-/* ----------------------------------------------------
-   Mobile UI (Bottom Bar & Toggle Button)
-   ---------------------------------------------------- */
-#toggle-list-btn{
-  position:fixed; top:8px; right:8px; z-index:60;
-  padding:8px 12px;
-  background:var(--accent); color:var(--bg-dark); border:none; border-radius:4px;
-  cursor:pointer; font-weight:600; box-shadow: 0 2px 5px rgba(0,0,0,0.5);
-}
-#bottomMenu{
-  position:fixed;left:0;right:0;bottom:0;height:62px;
-  background:var(--bg-medium);
-  display:flex;align-items:center;justify-content:space-around;
-  border-top:1px solid var(--border-soft);
-  z-index:55;
-  transition:background-color 0.3s;
-}
-.menu-btn{display:flex;flex-direction:column;align-items:center;font-size:12px;color:var(--text-soft);gap:4px;cursor:pointer}
-.menu-btn.active{color:var(--accent);font-weight:600}
-
-/* ----------------------------------------------------
-   Desktop Responsiveness (PC) 
-   ---------------------------------------------------- */
-@media(min-width:900px){
-  .app{flex-direction:row}
-  #left{
-    width:300px; height:100%; max-height:100%;
-    position:relative; transform:none;
-    border-right:1px solid var(--border-soft);
-    padding:16px; background:var(--bg-medium);
-  }
-  #controls-container{padding-top:0} 
-  #list{height:calc(100% - 190px)} 
-  #playerWrap{flex:1;padding:0;min-height:100vh}
-  #toggle-list-btn{display:none}
-  #bottomMenu{display:none}
-}
-</style>
+  <link rel="stylesheet" href="./style.css" />
 </head>
-<body class="dark-mode"> <!-- La clase se establece dinámicamente -->
-<button id="toggle-list-btn" aria-label="Mostrar lista">☰ Canales</button>
+<body class="dark-mode">
+  <!-- Botón móvil para mostrar lista -->
+  <button id="toggle-list-btn" aria-label="Mostrar lista">☰ Canales</button>
 
-<div class="app" id="app">
-  <aside id="left">
-    <div id="controls-container">
-      <select id="language-select" onchange="setLanguage(this.value)">
-        <option value="es" selected>🇪🇸 Español</option>
-        <option value="en">🇬🇧 English</option>
-        <option value="pt">🇵🇹 Português</option>
-        <option value="ar">العربية</option>
-      </select>
+  <div class="app" id="app">
+    <!-- SIDEBAR / LISTA -->
+    <aside id="left">
+      <header class="sidebar-header">
+        <div class="app-brand">
+          <img src="https://cdn-icons-png.flaticon.com/512/4607/4607871.png" alt="IPTV" />
+          <div class="app-brand-text">
+            <span class="app-title">IPTV</span>
+            <span class="app-subtitle">Lista global iptv-org</span>
+          </div>
+        </div>
+        <button id="sidebar-close" aria-label="Cerrar lista">✕</button>
+      </header>
 
-      <select id="country-select" onchange="filterChannels()">
-        <option value="" id="opt-all-countries">Cargando Países...</option>
-      </select>
+      <div id="controls-container">
+        <div class="control-row">
+          <select id="language-select">
+            <option value="es" selected>🇪🇸 Español</option>
+            <option value="en">🇬🇧 English</option>
+            <option value="pt">🇵🇹 Português</option>
+            <option value="ar">العربية</option>
+          </select>
+        </div>
 
-      <select id="category-select" onchange="filterChannels()">
-        <option value="" id="opt-all-categories">Cargando Categorías...</option>
-      </select>
+        <div class="control-row control-row-inline">
+          <div class="control-chip">
+            <label for="country-select">País</label>
+            <select id="country-select">
+              <option value="" id="opt-all-countries">Cargando Países...</option>
+            </select>
+          </div>
+          <div class="control-chip">
+            <label for="category-select">Categoría</label>
+            <select id="category-select">
+              <option value="" id="opt-all-categories">Cargando Categorías...</option>
+            </select>
+          </div>
+        </div>
 
-      <input id="search" placeholder="Buscar canal..." />
-    </div>
+        <div class="control-row search-row">
+          <span class="search-icon">🔍</span>
+          <input id="search" placeholder="Buscar canal..." />
+          <button id="clear-search" aria-label="Limpiar búsqueda">✕</button>
+        </div>
 
-    <div id="list" role="listbox" aria-label="Lista de canales"></div>
-  </aside>
-
-  <main id="playerWrap">
-    <div style="width:100%;height:100%;max-width:1400px;max-height:100vh;position:relative">
-      <video id="video" controls playsinline crossorigin="anonymous"></video>
-      <div id="overlay" class="overlay" role="status" aria-hidden="true"></div>
-      <div id="spinner" class="spinnerSmall" aria-hidden="true">Cargando…</div>
-
-      <button id="fsBtn" title="Abrir lista" aria-label="Abrir lista">📺</button>
-      <div id="fsMenu" aria-hidden="true">
-        <input id="fsSearch" class="fs-search" placeholder="Buscar canal..." />
-        <div id="fsList"></div>
+        <div class="filter-chips">
+          <button class="pill-filter pill-active" data-filter="all">Todos</button>
+          <button class="pill-filter" data-filter="favs">★ Favoritos</button>
+          <button class="pill-filter" data-filter="hist">⟲ Historial</button>
+        </div>
       </div>
-    </div>
 
-    <!-- MODAL DE FAVORITOS -->
-    <div id="favoritesModal" class="modal-overlay" aria-hidden="true">
-        <div class="modal-content">
-            <h2>★ Favoritos</h2>
-            <div id="favoritesList"></div>
-            <button id="closeFavModal" class="modal-close-btn" aria-label="Cerrar favoritos">X</button>
-        </div>
-    </div>
-    
-    <!-- NUEVO: MODAL DE AJUSTES -->
-    <div id="settingsModal" class="modal-overlay" aria-hidden="true">
-        <div class="modal-content">
-            <h2>⚙️ Ajustes</h2>
-            <div id="settingsContent">
-                <div class="settings-item">
-                    <span>Modo Claro / Oscuro</span>
-                    <label class="switch">
-                        <input type="checkbox" id="lightModeToggle">
-                        <span class="slider"></span>
-                    </label>
-                </div>
+      <div id="list" role="listbox" aria-label="Lista de canales"></div>
+    </aside>
+
+    <!-- PLAYER -->
+    <main id="playerWrap">
+      <div class="player-shell">
+        <header class="top-bar">
+          <div class="top-bar-left">
+            <button id="top-menu-btn" class="icon-btn" aria-label="Mostrar lista">☰</button>
+            <div class="now-playing">
+              <span class="now-label">Reproduciendo</span>
+              <span id="nowTitle" class="now-title">Selecciona un canal</span>
             </div>
-            <button id="closeSettingsModal" class="modal-close-btn" aria-label="Cerrar ajustes">X</button>
-        </div>
-    </div>
+          </div>
+          <div class="top-bar-right">
+            <button id="btn-settings-top" class="icon-btn" aria-label="Ajustes">⚙️</button>
+          </div>
+        </header>
 
-    <!-- POPUP DE INSTALACIÓN PWA -->
-    <div id="installModal" class="modal-overlay" style="display:none;" aria-hidden="true">
+        <div class="video-wrapper">
+          <video id="video" playsinline controls crossorigin="anonymous"></video>
+
+          <div id="overlay" class="overlay" role="status" aria-hidden="true"></div>
+          <div id="spinner" class="spinnerSmall" aria-hidden="true">
+            <div class="spinner-dot"></div>
+            <span>Cargando…</span>
+          </div>
+
+          <button id="fsBtn" title="Buscar canal" aria-label="Buscar canal">📺</button>
+          <div id="fsMenu" aria-hidden="true">
+            <div class="fs-header">
+              <input id="fsSearch" class="fs-search" placeholder="Buscar canal..." />
+            </div>
+            <div id="fsList"></div>
+          </div>
+        </div>
+
+        <footer class="mini-now-bar">
+          <div class="mini-info">
+            <div class="mini-logo" id="mini-logo"></div>
+            <div class="mini-text">
+              <span id="mini-title" class="mini-title">Sin canal</span>
+              <span id="mini-meta" class="mini-meta">Lista global IPTV-ORG</span>
+            </div>
+          </div>
+          <div class="mini-actions">
+            <button id="mini-fav-btn" class="icon-btn" title="Favorito">☆</button>
+            <button id="mini-fullscreen-btn" class="icon-btn" title="Pantalla completa">⛶</button>
+          </div>
+        </footer>
+      </div>
+
+      <!-- MODAL FAVORITOS -->
+      <div id="favoritesModal" class="modal-overlay" aria-hidden="true">
+        <div class="modal-content">
+          <h2>★ Favoritos</h2>
+          <div id="favoritesList"></div>
+          <button id="closeFavModal" class="modal-close-btn" aria-label="Cerrar favoritos">X</button>
+        </div>
+      </div>
+
+      <!-- MODAL AJUSTES -->
+      <div id="settingsModal" class="modal-overlay" aria-hidden="true">
+        <div class="modal-content">
+          <h2>⚙️ Ajustes</h2>
+          <div id="settingsContent">
+            <div class="settings-item">
+              <span>Modo Claro / Oscuro</span>
+              <label class="switch">
+                <input type="checkbox" id="lightModeToggle">
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+          <button id="closeSettingsModal" class="modal-close-btn" aria-label="Cerrar ajustes">X</button>
+        </div>
+      </div>
+
+      <!-- POPUP INSTALACIÓN PWA -->
+      <div id="installModal" class="modal-overlay" style="display:none;" aria-hidden="true">
         <div class="install-modal-content">
-            <h3>Instalar Aplicación</h3>
-            <p>Le gustaría instalar nuestra aplicación en su dispositivo para un acceso rápido y directo (como una app nativa)?</p>
-            <div class="install-modal-buttons">
-                <button id="btn-install-yes">Sí, Instalar</button>
-                <button id="btn-install-no">No, gracias</button>
-            </div>
+          <h3>Instalar aplicación</h3>
+          <p>¿Quieres instalar la app en tu dispositivo para un acceso rápido?</p>
+          <div class="install-modal-buttons">
+            <button id="btn-install-yes">Sí, instalar</button>
+            <button id="btn-install-no">No, gracias</button>
+          </div>
         </div>
-    </div>
-  </main>
-</div>
-
-<nav id="bottomMenu" aria-hidden="false">
-  <div class="menu-btn" id="btn-channels">☰<span>Canales</span></div>
-  <div class="menu-btn" id="btn-favs">★<span>Favoritos</span></div>
-  <div class="menu-btn" id="btn-hist">⟲<span>Historial</span></div>
-  <!-- NUEVO BOTÓN DE AJUSTES -->
-  <div class="menu-btn" id="btn-settings">⚙️<span>Ajustes</span></div>
-</nav>
-
-<script>
-/* ---------------------------
-   Configuración y elementos
-   --------------------------- */
-// Fuentes de datos
-const M3U_URL = "https://iptv-org.github.io/iptv/index.m3u";
-const COUNTRIES_API = "https://iptv-org.github.io/api/countries.json";
-
-// Elementos del DOM
-const body = document.body;
-const video = document.getElementById('video');
-const listEl = document.getElementById('list');
-const countrySelect = document.getElementById('country-select');
-const categorySelect = document.getElementById('category-select');
-const searchInput = document.getElementById('search');
-const overlay = document.getElementById('overlay');
-const spinner = document.getElementById('spinner');
-const toggleBtn = document.getElementById('toggle-list-btn');
-const leftPanel = document.getElementById('left');
-const fsBtn = document.getElementById('fsBtn');
-const fsMenu = document.getElementById('fsMenu');
-const fsList = document.getElementById('fsList');
-const fsSearch = document.getElementById('fsSearch');
-const optAllCountries = document.getElementById('opt-all-countries');
-const optAllCategories = document.getElementById('opt-all-categories');
-const favoritesModal = document.getElementById('favoritesModal');
-const favoritesListContainer = document.getElementById('favoritesList');
-const installModal = document.getElementById('installModal');
-const settingsModal = document.getElementById('settingsModal'); 
-const lightModeToggle = document.getElementById('lightModeToggle'); 
-
-// Variables de estado
-let hls = null;
-let allChannels = [];
-let channelsDOM = [];
-let countriesMap = {};
-let favorites = JSON.parse(localStorage.getItem('iptv_favs')||'[]');
-let historyList = JSON.parse(localStorage.getItem('iptv_hist')||'[]');
-let currentLang = 'es';
-let hlsRetryCount = 0; 
-let deferredPrompt; 
-let installModalShown = localStorage.getItem('pwa_install_shown') === 'true';
-
-/* ---------- Internationalization (small) ---------- */
-const translations = {
-  es:{ 
-    loading:"Cargando lista...", noChannels:"No se encontraron canales.", toggleOpen:"☰ Canales", toggleClose:"X Cerrar", search:"Buscar canal...", errorNative:"No se pudo reproducir este canal (Nativo).",
-    favAdd: 'Añadir a Favoritos', favRemove: 'Quitar de Favoritos', errorFatal: 'Error Fatal: No se pudo cargar el stream.' // Mensaje de error más específico en la UI (aunque intentamos evitarlo)
-  },
-  en:{ 
-    loading:"Loading list...", noChannels:"No channels found.", toggleOpen:"☰ Channels", toggleClose:"X Close", search:"Search channel...", errorNative:"Could not play this channel (Native).",
-    favAdd: 'Add to Favorites', favRemove: 'Remove from Favorites', errorFatal: 'Fatal Error: Could not load stream.'
-  },
-  pt:{ 
-    loading:"Carregando lista...", noChannels:"Nenhum canal encontrado.", toggleOpen:"☰ Canais", toggleClose:"X Fechar", search:"Pesquisar canal...", errorNative:"Não foi possível reproduzir este canal (Nativo).",
-    favAdd: 'Adicionar aos Favoritos', favRemove: 'Remover dos Favoritos', errorFatal: 'Erro Fatal: Não foi possível carregar o stream.'
-  },
-  ar:{ 
-    loading:"جارٍ التحميل...", noChannels:"لم يتم العثور على قنوات.", toggleOpen:"☰ القنوات", toggleClose:"X إغلاق", search:"ابحث عن قناة...", errorNative:"تعذر تشغيل هذه القناة (أصلي).",
-    favAdd: 'أضف إلى المفضلة', favRemove: 'إزالة من المفضلة', errorFatal: 'خطأ فادح: تعذر تحميل البث.'
-  }
-};
-
-/* ---------- Utility ---------- */
-function setLanguage(lang){
-  currentLang = lang;
-  const t = translations[lang] || translations.es;
-  document.getElementById('app-title').innerText = (lang==='en' ? 'Modern IPTV Web Player' : 'Reproductor IPTV Web Moderno');
-  searchInput.placeholder = t.search;
-  toggleBtn.innerText = leftPanel.classList.contains('active') ? t.toggleClose : t.toggleOpen;
-  optAllCountries.textContent = (lang==='en'?'🌐 All Countries':'🌐 Todos los Países') + (allChannels.length?` (${allChannels.length})`:'');
-  optAllCategories.textContent = (lang==='en'?'⭐ All Categories':'⭐ Todas las Categorías');
-  document.documentElement.dir = (lang==='ar') ? 'rtl' : 'ltr';
-}
-
-/* ----------------------------------------------------
-   Lógica de Modo Claro/Oscuro
-   ---------------------------------------------------- */
-function toggleLightMode() {
-    const isLight = body.classList.toggle('light-mode');
-    localStorage.setItem('theme_mode', isLight ? 'light' : 'dark');
-}
-
-function initializeTheme() {
-    // 1. Cargar preferencia de tema
-    const savedTheme = localStorage.getItem('theme_mode') || 'dark';
-    if (savedTheme === 'light') {
-        body.classList.add('light-mode');
-        lightModeToggle.checked = true;
-    } else {
-        body.classList.remove('light-mode');
-        lightModeToggle.checked = false;
-    }
-
-    // 2. Escuchador para el switch
-    lightModeToggle.addEventListener('change', toggleLightMode);
-}
-
-// Escuchadores de botones del modal de ajustes
-document.getElementById('btn-settings').addEventListener('click', () => {
-    settingsModal.style.display = 'flex';
-    settingsModal.setAttribute('aria-hidden', 'false');
-    setActiveMenuButton('btn-settings');
-});
-
-document.getElementById('closeSettingsModal').addEventListener('click', () => {
-    settingsModal.style.display = 'none';
-    settingsModal.setAttribute('aria-hidden', 'true');
-    setActiveMenuButton(null);
-});
-
-
-/* ---------- Fetch helpers & M3U Parser (Logic unchanged) ---------- */
-async function fetchJSON(url){
-  const r = await fetch(url);
-  if(!r.ok) throw new Error('Fetch failed: '+url);
-  return r.json();
-}
-
-function extractAttr(line, key){
-  const re = new RegExp(key+'="([^"]*)"','i');
-  const m = line.match(re);
-  return m ? m[1].trim() : '';
-}
-
-async function loadList(){
-  listEl.innerHTML = `<div style="padding:12px;color:var(--accent)">${translations[currentLang].loading}</div>`;
-  try{
-    const [m3uText, countriesData] = await Promise.all([
-      fetch(M3U_URL).then(r=>r.text()),
-      fetchJSON(COUNTRIES_API).catch(()=>[])
-    ]);
-
-    (countriesData||[]).forEach(c=>{ if(c.code) countriesMap[c.code.toUpperCase()] = c.name; });
-
-    const lines = m3uText.split(/\r?\n/);
-    allChannels = [];
-    const countries = new Set();
-    const categories = new Set();
-
-    for(let i=0;i<lines.length;i++){
-      const L = lines[i].trim();
-      if(!L) continue;
-      if(L.startsWith('#EXTINF')){
-        const name = (L.includes(',') ? L.substring(L.indexOf(',')+1).trim() : '');
-        const logo = extractAttr(L,'tvg-logo') || extractAttr(L,'logo') || null;
-        const country = (extractAttr(L,'tvg-country') || extractAttr(L,'country') || '').toUpperCase() || 'OTROS';
-        const group = extractAttr(L,'group-title') || 'Otros';
-        let j = i+1;
-        while(j<lines.length && !lines[j].trim()) j++;
-        const url = (lines[j]||'').trim();
-        i = j;
-        if(name && url){
-          allChannels.push({name,logo,url,country,group});
-          countries.add(country);
-          categories.add(group);
-        }
-      }
-    }
-
-    if(allChannels.length===0){
-      listEl.innerHTML = `<div style="padding:12px;color:#ff6b6b">${translations[currentLang].noChannels}</div>`;
-      return;
-    }
-
-    optAllCountries.textContent = (currentLang==='en'?'🌐 All':'🌐 Todos') + ` (${allChannels.length})`;
-    countrySelect.innerHTML = '';
-    countrySelect.appendChild(optAllCountries);
-    Array.from(countries).sort().forEach(c=>{
-      const o = document.createElement('option'); o.value = c; o.textContent = countriesMap[c] || c; countrySelect.appendChild(o);
-    });
-
-    optAllCategories.textContent = (currentLang==='en'?'⭐ All Categories':'⭐ Todas las Categorías');
-    categorySelect.innerHTML = '';
-    categorySelect.appendChild(optAllCategories);
-    Array.from(categories).sort().forEach(g=>{
-      const o = document.createElement('option'); o.value = g; o.textContent = g; categorySelect.appendChild(o);
-    });
-
-    renderChannels(allChannels);
-    renderFsList(allChannels);
-  }catch(err){
-    console.error(err);
-    listEl.innerHTML = `<div style="padding:12px;color:#ff6b6b">Error cargando lista</div>`;
-  }
-}
-
-/* ---------- Favorites Logic (Logic unchanged) ---------- */
-function toggleFavorite(ch, starEl) {
-    const t = translations[currentLang];
-    const url = ch.url;
-    const isFav = favorites.includes(url);
-    let channelElementInMainList = null;
-
-    if(ch.name) {
-       channelElementInMainList = channelsDOM.find(el => el.dataset.url === url);
-    } else {
-        channelElementInMainList = channelsDOM.find(el => el.dataset.url === url);
-        if (channelElementInMainList) {
-             starEl = channelElementInMainList.querySelector('.favorite-toggle');
-        }
-    }
-
-    if (isFav) {
-        favorites = favorites.filter(u => u !== url);
-        if(starEl) {
-            starEl.innerHTML = '☆'; 
-            starEl.title = t.favAdd;
-        }
-    } else {
-        favorites.push(url);
-        if(starEl) {
-            starEl.innerHTML = '★'; 
-            starEl.title = t.favRemove;
-        }
-    }
-    localStorage.setItem('iptv_favs', JSON.stringify(favorites));
-
-    if(favoritesModal.style.display === 'flex') {
-        showFavoritesModal();
-    }
-}
-
-/* ---------- Render functions (Listas de Canales) (Logic unchanged) ---------- */
-function createChannelElement(ch){
-  const el = document.createElement('div');
-  el.className = 'channel';
-  el.tabIndex = 0;
-  el.dataset.url = ch.url;
-  el.dataset.name = ch.name;
-  el.dataset.country = ch.country;
-  el.dataset.group = ch.group;
-
-  const logo = document.createElement('div'); logo.className = 'channel-logo';
-  if(ch.logo){
-    const img = document.createElement('img'); img.src = ch.logo; img.alt = ch.name + ' logo';
-    img.onerror = ()=>{ img.remove(); logo.textContent = ch.name.slice(0,2).toUpperCase(); };
-    logo.appendChild(img);
-  } else {
-    logo.textContent = ch.name.slice(0,2).toUpperCase();
-  }
-
-  const name = document.createElement('div'); name.className = 'channel-name'; name.textContent = ch.name;
-
-  const t = translations[currentLang];
-  const isFav = favorites.includes(ch.url);
-  const favBtn = document.createElement('span');
-  favBtn.className = 'favorite-toggle';
-  favBtn.innerHTML = isFav ? '★' : '☆';
-  favBtn.title = isFav ? t.favRemove : t.favAdd;
-
-  favBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      toggleFavorite(ch, favBtn);
-  });
-
-  el.appendChild(logo); 
-  el.appendChild(name);
-  el.appendChild(favBtn);
-  el.addEventListener('click', ()=>playChannel(ch,el));
-  el.addEventListener('keydown', (e)=>{ if(e.key==='Enter') playChannel(ch,el); });
-
-  return el;
-}
-
-function renderChannels(list){
-  listEl.innerHTML = '';
-  channelsDOM = [];
-  if(!list || list.length===0){
-    listEl.innerHTML = `<div style="padding:12px;color:#ffd166">No hay canales para este filtro.</div>`;
-    return;
-  }
-  const frag = document.createDocumentFragment();
-  for(const ch of list){
-    const el = createChannelElement(ch);
-    frag.appendChild(el);
-    channelsDOM.push(el);
-  }
-  listEl.appendChild(frag);
-}
-
-function renderFsList(list){
-  const fsList = document.getElementById('fsList');
-  fsList.innerHTML = '';
-  const frag = document.createDocumentFragment();
-  for(const ch of list){
-    const el = document.createElement('div');
-    el.style.padding = '8px'; el.style.cursor = 'pointer'; el.style.borderRadius = '6px';
-    el.textContent = ch.name;
-    const fsMenu = document.getElementById('fsMenu');
-    el.onclick = ()=>{ playChannel(ch,null); fsMenu.style.display='none'; };
-    frag.appendChild(el);
-  }
-  fsList.appendChild(frag);
-}
-
-/* ---------- FAVORITES MODAL LOGIC (Logic unchanged) ---------- */
-function createModalChannelElement(ch) {
-    const el = document.createElement('div');
-    el.className = 'channel';
-
-    const nameEl = document.createElement('span');
-    nameEl.className = 'channel-name';
-    nameEl.textContent = ch.name;
-
-    const removeBtn = document.createElement('span');
-    removeBtn.textContent = '❌';
-    removeBtn.style.cursor = 'pointer';
-    removeBtn.style.marginLeft = '10px';
-    removeBtn.title = translations[currentLang].favRemove;
-
-    removeBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        toggleFavorite({ url: ch.url }, el); 
-        showFavoritesModal();
-    });
-
-    el.appendChild(nameEl);
-    el.appendChild(removeBtn);
-
-    el.addEventListener('click', () => {
-        playChannel(ch, null);
-        favoritesModal.style.display = 'none';
-        favoritesModal.setAttribute('aria-hidden', 'true');
-        setActiveMenuButton(null);
-    });
-    return el;
-}
-
-function renderFavoritesModalList(list) {
-    favoritesListContainer.innerHTML = '';
-    if (!list || list.length === 0) {
-        favoritesListContainer.innerHTML = `<div style="padding:10px;color:var(--text-soft);">No tienes canales favoritos guardados.</div>`;
-        return;
-    }
-
-    const frag = document.createDocumentFragment();
-    for (const ch of list) {
-        const el = createModalChannelElement(ch);
-        frag.appendChild(el);
-    }
-    favoritesListContainer.appendChild(frag);
-}
-
-function showFavoritesModal() {
-    setActiveMenuButton('btn-favs');
-
-    const favs = allChannels.filter(c => favorites.includes(c.url));
-    renderFavoritesModalList(favs);
-
-    favoritesModal.style.display = 'flex';
-    favoritesModal.setAttribute('aria-hidden', 'false');
-
-    if (window.innerWidth < 900 && leftPanel.classList.contains('active')) {
-        leftPanel.classList.remove('active');
-        toggleBtn.textContent = translations[currentLang].toggleOpen;
-        setActiveMenuButton('btn-favs'); 
-    }
-}
-
-/* --------------------------------------------------------------------------------------
-   Playback: HLS with Robust Error Handling (MODIFICADO para manejar el error CORS/Fatal)
-   -------------------------------------------------------------------------------------- */
-async function playChannel(ch, el){
-  const t = translations[currentLang];
-
-  // LOGICA DEL HISTORIAL
-  const urlIndex = historyList.indexOf(ch.url);
-  if (urlIndex !== -1) { historyList.splice(urlIndex, 1); } 
-  historyList.unshift(ch.url); 
-  historyList = historyList.slice(0, 50); 
-  localStorage.setItem('iptv_hist', JSON.stringify(historyList));
-
-
-  // UI Updates
-  channelsDOM.forEach(c=>c.classList.remove('active'));
-  if(el) el.classList.add('active');
-
-  if(window.innerWidth < 900) { 
-    leftPanel.classList.remove('active'); 
-    toggleBtn.innerText = t.toggleOpen || '☰ Canales'; 
-  }
-
-  overlay.textContent = ch.name;
-  overlay.style.display = 'block';
-  overlay.setAttribute('aria-hidden','false');
-  // Dejar el overlay visible si hay un error
-  // setTimeout(()=>{ overlay.style.display = 'none'; overlay.setAttribute('aria-hidden','true'); }, 3000);
-
-  spinner.style.display = 'block';
-  spinner.setAttribute('aria-hidden','false');
-
-  try{ 
-    if(hls){ hls.destroy(); hls = null; } 
-    video.pause(); 
-    video.removeAttribute('src'); 
-    video.load(); 
-  }catch(e){ console.warn("Cleanup failed", e); }
-
-
-  const url = ch.url;
-  hlsRetryCount = 0; 
-
-  function tryNativePlay(src){
-    return new Promise((resolve, reject)=>{
-      video.src = src;
-      const p = video.play();
-      if(p && p.then){
-        p.then(()=>resolve()).catch(err=>reject(err));
-      }else{
-        // En algunos entornos el play es sincrónico
-        resolve();
-      }
-    });
-  }
-  
-  function hlsOnError(event, data){
-    console.warn('HLS error',data);
-    if(data.fatal){
-      if(hlsRetryCount < 2){ 
-        hlsRetryCount++;
-        console.log(`Intentando recuperar HLS.js... Reintento #${hlsRetryCount}`);
-        
-        if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
-            hls.recoverMediaError();
-        } else if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
-            hls.loadSource(url); 
-        } else {
-            hls.destroy();
-            hls = null;
-            setTimeout(() => playChannel(ch, el), 1000); 
-        }
-      } else {
-        // *** CAMBIO CLAVE AQUÍ: Cuando HLS.js falla fatalmente (por CORS), ***
-        // *** intentamos el fallback nativo sin mostrar la alerta de error fatal. ***
-        console.error('HLS error fatal después de reintentos. Intentando fallback nativo como último recurso.');
-        try{ if(hls) hls.destroy(); }catch(e){}
-        hls = null;
-        tryNativePlay(url)
-          .then(()=>{ 
-            spinner.style.display='none'; 
-            overlay.style.display='none'; // Ocultar si funciona
-          })
-          .catch(()=>{ 
-            spinner.style.display='none'; 
-            // Si el nativo también falla (ej. por MIME type no soportado)
-            alert(t.errorFatal); 
-            overlay.style.display='none';
-          }); 
-      }
-    }
-  }
-
-
-  const u = url.split('?')[0].toLowerCase();
-  const isM3U8 = u.endsWith('.m3u8') || u.includes('.m3u8');
-  const isMPD  = u.endsWith('.mpd') || u.includes('.mpd');
-  const isRtsp = u.startsWith('rtsp:');
-  const isRtmp = u.startsWith('rtmp:');
-
-  try{
-    if(isRtsp || isRtmp || isMPD){
-      spinner.style.display='none';
-      overlay.style.display='none';
-      alert('Este stream no es reproducible directamente en navegadores (RTSP/RTMP/DASH).');
-      return;
-    }
-
-    if(isM3U8){
-      if(Hls.isSupported()){
-        hls = new Hls({
-          maxBufferLength: 30,
-          enableWorker: true,
-          manifestLoadingRetryDelay: 1000,
-          fragLoadingRetryDelay: 1200,
-          // Añadir esta cabecera CORS en la solicitud es inútil, 
-          // debe ser respondida por el servidor de origen
-          // xhrSetup: (xhr, url) => { xhr.withCredentials = true; } 
-        });
-        hls.loadSource(url);
-        hls.attachMedia(video);
-
-        hls.on(Hls.Events.MANIFEST_PARSED, ()=>{ 
-            spinner.style.display='none'; 
-            spinner.setAttribute('aria-hidden','true'); 
-            overlay.style.display='none'; // Ocultar overlay si hay éxito
-            video.play().catch(()=>{}); 
-        });
-        
-        hls.on(Hls.Events.ERROR, hlsOnError); 
-
-        return;
-      } else if(video.canPlayType('application/vnd.apple.mpegurl')){
-        // Intenta reproducción nativa si HLS.js no está soportado (ej. Safari)
-        tryNativePlay(url)
-          .then(()=>{ spinner.style.display='none'; overlay.style.display='none'; })
-          .catch(()=>{ spinner.style.display='none'; overlay.style.display='none'; alert(t.errorNative);});
-        return;
-      }
-    }
-
-    // Fallback: Try native playback for other streams (M3U, MP4, TS)
-    await tryNativePlay(url);
-    spinner.style.display='none';
-    overlay.style.display='none';
-    return;
-
-  }catch(err){
-    console.error('Playback error final fallback:',err);
-    spinner.style.display='none';
-    overlay.style.display='none';
-    alert('No se pudo reproducir este canal (Error de CORS/Formato/Seguridad).');
-  }
-}
-
-/* ---------- Filtering (Logic unchanged) ---------- */
-function filterChannels(){
-  const country = countrySelect.value;
-  const group = categorySelect.value;
-  const q = (searchInput.value||'').toLowerCase();
-
-  const filtered = allChannels.filter(ch=>{
-    const matchCountry = !country || ch.country === country;
-    const matchGroup = !group || ch.group === group;
-    const matchQuery = !q || ch.name.toLowerCase().includes(q);
-    return matchCountry && matchGroup && matchQuery;
-  });
-
-  renderChannels(filtered);
-  renderFsList(filtered);
-}
-
-/* ---------- Menu & Toggle Behaviors (Modified for new modal) ---------- */
-
-function showAllChannels() {
-    countrySelect.value = '';
-    categorySelect.value = '';
-    searchInput.value = '';
-    filterChannels(); 
-}
-
-function setActiveMenuButton(id){
-    document.querySelectorAll('#bottomMenu .menu-btn').forEach(btn => btn.classList.remove('active'));
-    if(id) document.getElementById(id).classList.add('active');
-}
-
-document.getElementById('btn-channels').addEventListener('click', ()=>{ 
-    const t = translations[currentLang];
-    if (window.innerWidth < 900 && !leftPanel.classList.contains('active')) {
-         leftPanel.classList.add('active'); 
-         toggleBtn.textContent = t.toggleClose;
-    }
-    // Asegurarse de que el panel derecho se muestre si está en móvil
-    if (window.innerWidth < 900) { 
-        favoritesModal.style.display = 'none';
-        settingsModal.style.display = 'none'; 
-    }
-    showAllChannels(); 
-    setActiveMenuButton('btn-channels');
-});
-
-document.getElementById('btn-favs').addEventListener('click', showFavoritesModal);
-
-function showHistory(){
-  const hist = historyList.map(u=> allChannels.find(c=>c.url===u)).filter(Boolean);
-  renderChannels(hist);
-  renderFsList(hist);
-}
-
-document.getElementById('btn-hist').addEventListener('click', ()=>{ 
-    const t = translations[currentLang];
-    showHistory(); 
-    setActiveMenuButton('btn-hist'); 
-
-    if (window.innerWidth < 900 && !leftPanel.classList.contains('active')) {
-         leftPanel.classList.add('active'); 
-         toggleBtn.textContent = t.toggleClose;
-    }
-    // Asegurarse de que el panel derecho se muestre si está en móvil
-    if (window.innerWidth < 900) { 
-        favoritesModal.style.display = 'none';
-        settingsModal.style.display = 'none'; 
-    }
-});
-
-
-/* mobile toggle logic */
-toggleBtn.addEventListener('click', ()=>{
-  const t = translations[currentLang];
-  const isActive = leftPanel.classList.toggle('active');
-  toggleBtn.textContent = isActive ? t.toggleClose : t.toggleOpen;
-
-  if(window.innerWidth < 900) {
-    setActiveMenuButton(isActive ? 'btn-channels' : null);
-    favoritesModal.style.display = 'none'; // Cierra modales al abrir sidebar
-    settingsModal.style.display = 'none'; // Cierra modales al abrir sidebar
-  } else {
-    showAllChannels();
-  }
-
-  if (isActive) {
-      showAllChannels();
-  }
-});
-
-/* Close modal listeners */
-document.getElementById('closeFavModal').addEventListener('click', () => {
-    favoritesModal.style.display = 'none';
-    favoritesModal.setAttribute('aria-hidden', 'true');
-    setActiveMenuButton(null); 
-});
-
-// Handle ESC key to close modal/sidebar
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-        if (favoritesModal.style.display === 'flex') {
-            favoritesModal.style.display = 'none';
-            favoritesModal.setAttribute('aria-hidden', 'true');
-            setActiveMenuButton(null);
-        } else if (settingsModal.style.display === 'flex') { // Cerrar ajustes
-            settingsModal.style.display = 'none';
-            settingsModal.setAttribute('aria-hidden', 'true');
-            setActiveMenuButton(null);
-        } else if (leftPanel.classList.contains('active')) {
-            leftPanel.classList.remove('active');
-            toggleBtn.textContent = translations[currentLang].toggleOpen;
-            setActiveMenuButton(null);
-        } else if (installModal.style.display === 'flex') {
-            hideInstallModal(); 
-        }
-    }
-});
-
-
-/* ---------- FS menu behaviors (fullscreen) (Logic unchanged) ---------- */
-document.addEventListener('fullscreenchange', ()=>{
-  if(document.fullscreenElement){
-    fsBtn.style.display = 'flex';
-  } else {
-    fsBtn.style.display = 'none';
-    fsMenu.style.display = 'none';
-  }
-});
-fsBtn.addEventListener('click', ()=>{ fsMenu.style.display = fsMenu.style.display==='block' ? 'none' : 'block'; });
-fsSearch.addEventListener('input', ()=> {
-  const q = fsSearch.value.toLowerCase();
-  [...document.getElementById('fsList').children].forEach(c => c.style.display = c.textContent.toLowerCase().includes(q) ? 'block' : 'none');
-});
-
-
-/* ---------- Search listeners (Logic unchanged) ---------- */
-searchInput.addEventListener('input', ()=> filterChannels());
-
-
-/* ----------------------------------------------------
-   LÓGICA DEL POPUP DE INSTALACIÓN PWA (Logic unchanged)
-   ---------------------------------------------------- */
-function hideInstallModal() {
-    installModal.style.display = 'none';
-    installModal.setAttribute('aria-hidden', 'true');
-    localStorage.setItem('pwa_install_shown', 'true'); 
-}
-
-window.addEventListener('beforeinstallprompt', (e) => {
-  e.preventDefault(); 
-  deferredPrompt = e; 
-
-  if(!installModalShown){ 
-    installModal.style.display = 'flex';
-    installModal.setAttribute('aria-hidden', 'false');
-  }
-});
-
-document.getElementById('btn-install-yes').addEventListener('click', () => {
-  hideInstallModal();
-
-  if (deferredPrompt) {
-    deferredPrompt.prompt();
-    deferredPrompt.userChoice.then((choiceResult) => {
-      console.log('User choice:', choiceResult.outcome);
-      deferredPrompt = null; 
-    });
-  }
-});
-
-document.getElementById('btn-install-no').addEventListener('click', hideInstallModal);
-
-
-/* ---------- Init ---------- */
-setLanguage('es');
-initializeTheme(); // Inicializar el tema
-loadList();
-
-/* ---------- PWA: Service Worker Registration (Logic unchanged) ---------- */
-if('serviceWorker' in navigator){
-  window.addEventListener('load', ()=> {
-    const swScript = `
-      const CACHE_NAME = 'iptv-player-cache-v5'; 
-      const urlsToCache = [
-        './', 
-        'https://cdn.jsdelivr.net/npm/hls.js@latest' 
-      ];
-
-      self.addEventListener('install', (event) => {
-        event.waitUntil(
-          caches.open(CACHE_NAME).then((cache) => {
-            return cache.addAll(urlsToCache).catch(err => {
-              console.error('SW: Failed to cache some assets', err);
-            });
-          })
-        );
-        self.skipWaiting();
-      });
-
-      self.addEventListener('activate', (event) => {
-        event.waitUntil(
-          caches.keys().then((cacheNames) => {
-            return Promise.all(
-              cacheNames.filter(name => name !== CACHE_NAME).map(name => caches.delete(name))
-            );
-          })
-        );
-        self.clients.claim();
-      });
-
-      self.addEventListener('fetch', (event) => {
-        if (event.request.mode === 'navigate' || event.request.destination === 'script' || event.request.destination === 'style') {
-          event.respondWith(
-            caches.match(event.request).then((response) => {
-              return response || fetch(event.request).catch(() => {
-                if (event.request.mode === 'navigate') {
-                  return new Response('<h1>Sin conexión</h1><p>Esta aplicación requiere conexión a Internet para cargar los canales.</p>', { headers: { 'Content-Type': 'text/html' } });
-                }
-              });
-            })
-          );
-        }
-      });
-    `;
-
-    try{
-      const swBlob = new Blob([swScript], {type: 'application/javascript'});
-      const swUrl = URL.createObjectURL(swBlob);
-      navigator.serviceWorker.register(swUrl)
-        .then(reg => console.log('Service Worker registrado con éxito:', reg.scope))
-        .catch(err => console.error('Fallo el registro del Service Worker:', err));
-    }catch(e){ 
-      console.warn('Fallo el registro del Service Worker (Inline Blob):',e); 
-    }
-  });
-}
-</script>
+      </div>
+    </main>
+  </div>
+
+  <!-- BOTTOM NAV (MÓVIL) -->
+  <nav id="bottomMenu" aria-hidden="false">
+    <div class="menu-btn" id="btn-channels">☰<span>Canales</span></div>
+    <div class="menu-btn" id="btn-favs">★<span>Favoritos</span></div>
+    <div class="menu-btn" id="btn-hist">⟲<span>Historial</span></div>
+    <div class="menu-btn" id="btn-settings">⚙️<span>Ajustes</span></div>
+  </nav>
+
+  <script src="./app.js"></script>
 </body>
 </html>
-
