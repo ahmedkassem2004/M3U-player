@@ -5,346 +5,259 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VORTEX | Hub de Medios</title>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;500;700&display=swap" rel="stylesheet">
     <style>
         :root {
             --accent: #FF5722;
-            --bg-body: #050505;
-            --bg-sidebar: #0f0f0f;
-            --bg-card: #1a1a1a;
-            --text-main: #ffffff;
+            --accent-glow: rgba(255, 87, 34, 0.3);
+            --bg-deep: #050505;
+            --bg-surface: #121212;
+            --bg-card: #1c1c1c;
+            --text-main: #eeeeee;
             --text-dim: #a0a0a0;
-            --sidebar-width: 260px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        body {
-            margin: 0;
-            background-color: var(--bg-body);
-            color: var(--text-main);
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
-            display: flex;
-            height: 100vh;
-            overflow: hidden;
+        * { box-sizing: border-box; }
+        
+        body { 
+            margin: 0; 
+            background-color: var(--bg-deep); 
+            color: var(--text-main); 
+            font-family: 'Inter', sans-serif; 
+            display: flex; 
+            height: 100vh; 
+            overflow: hidden; 
         }
 
-        /* --- SIDEBAR IZQUIERDO --- */
-        nav.sidebar {
-            width: var(--sidebar-width);
-            background: var(--bg-sidebar);
-            border-right: 1px solid rgba(255,255,255,0.05);
+        /* Sidebar Elegante */
+        .sidebar { 
+            width: 260px; 
+            background: var(--bg-surface); 
+            padding: 40px 20px; 
+            border-right: 1px solid #222;
             display: flex;
             flex-direction: column;
-            padding: 20px;
-            flex-shrink: 0;
+            gap: 10px;
         }
 
         .logo {
-            font-size: 24px;
-            font-weight: 900;
-            color: var(--accent);
-            letter-spacing: -1px;
-            margin-bottom: 40px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .nav-links {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .nav-item {
-            padding: 12px 16px;
-            border-radius: 12px;
-            cursor: pointer;
-            transition: 0.2s;
-            color: var(--text-dim);
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .nav-item:hover, .nav-item.active {
-            background: rgba(255,87,34,0.1);
-            color: var(--accent);
-        }
-
-        /* --- CONTENIDO PRINCIPAL --- */
-        main.main-content {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-
-        header.top-header {
-            height: 70px;
-            padding: 0 30px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            background: rgba(5,5,5,0.8);
-            backdrop-filter: blur(10px);
-            z-index: 10;
-        }
-
-        .search-box {
-            background: var(--bg-card);
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 50px;
-            padding: 8px 20px;
-            width: 400px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .search-box input {
-            background: none;
-            border: none;
-            color: white;
-            width: 100%;
-            outline: none;
-        }
-
-        /* --- ÁREA DEL REPRODUCTOR --- */
-        .player-wrapper {
-            background: #000;
-            width: 100%;
-            max-height: 500px;
-            position: relative;
-            display: flex;
-            justify-content: center;
-        }
-
-        .video-container {
-            width: 100%;
-            max-width: 1200px;
-            aspect-ratio: 16/9;
-            position: relative;
-            background: #000;
-        }
-
-        video { width: 100%; height: 100%; }
-
-        .static-overlay {
-            position: absolute; inset: 0; z-index: 2; pointer-events: none;
-            background: url('https://media.giphy.com/media/oEI9uWUicHk5i/giphy.gif');
-            background-size: cover; opacity: 0.1; filter: grayscale(1);
-        }
-        .video-active .static-overlay { display: none; }
-
-        /* --- GRID DE CANALES --- */
-        .scroll-area {
-            flex: 1;
-            overflow-y: auto;
-            padding: 30px;
-        }
-
-        .section-title {
-            font-size: 20px;
+            font-size: 1.5rem;
             font-weight: 700;
-            margin-bottom: 20px;
-            display: flex;
-            justify-content: space-between;
+            letter-spacing: 2px;
+            color: var(--accent);
+            margin-bottom: 30px;
+            padding-left: 15px;
+            text-shadow: 0 0 15px var(--accent-glow);
         }
 
-        .grid-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-            gap: 20px;
+        .nav-item { 
+            padding: 14px 18px; 
+            cursor: pointer; 
+            border-radius: 12px; 
+            transition: var(--transition); 
+            display: flex; 
+            align-items: center; 
+            gap: 12px;
+            color: var(--text-dim);
+            font-weight: 500;
         }
 
-        .card {
+        .nav-item:hover { 
+            background: rgba(255,255,255,0.05); 
+            color: white; 
+        }
+
+        .nav-item.active { 
+            background: var(--accent); 
+            color: white; 
+            box-shadow: 0 4px 15px var(--accent-glow);
+        }
+
+        /* Contenedores de GUI */
+        .gui-view { 
+            flex: 1; 
+            display: none; 
+            flex-direction: column; 
+            height: 100%; 
+            background: linear-gradient(180deg, #0a0a0a 0%, #050505 100%);
+        }
+        
+        .gui-view.active { display: flex; }
+
+        /* Zona de Video */
+        .player-zone { 
+            width: 100%; 
+            background: #000; 
+            aspect-ratio: 16/9; 
+            max-height: 50vh;
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            position: relative;
+        }
+
+        video { width: 100%; height: 100%; outline: none; }
+
+        /* Buscador */
+        .search-container {
+            padding: 20px 40px 10px 40px;
+        }
+
+        .search-bar {
+            width: 100%;
             background: var(--bg-card);
-            border-radius: 16px;
-            padding: 15px;
-            transition: 0.3s;
-            cursor: pointer;
-            border: 1px solid transparent;
-            text-align: center;
+            border: 1px solid #333;
+            padding: 12px 20px;
+            border-radius: 30px;
+            color: white;
+            font-size: 0.9rem;
+            transition: var(--transition);
         }
 
-        .card:hover {
-            transform: translateY(-5px);
-            background: #252525;
+        .search-bar:focus {
+            outline: none;
             border-color: var(--accent);
+            box-shadow: 0 0 10px var(--accent-glow);
         }
 
-        .card-img {
-            width: 80px;
-            height: 80px;
-            background: #000;
-            border-radius: 12px;
-            margin: 0 auto 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 10px;
+        /* Grid de Contenido */
+        .content-zone { 
+            flex: 1; 
+            overflow-y: auto; 
+            padding: 10px 40px 40px 40px; 
         }
 
-        .card-img img { max-width: 100%; max-height: 100%; object-fit: contain; }
+        /* Scrollbar Personalizado */
+        .content-zone::-webkit-scrollbar { width: 6px; }
+        .content-zone::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
 
-        .card h4 { margin: 0; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .card p { margin: 5px 0 0; font-size: 11px; color: var(--accent); font-weight: 700; }
-
-        /* --- RESPONSIVE --- */
-        @media (max-width: 768px) {
-            nav.sidebar { display: none; }
-            .search-box { width: 100%; }
+        .grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); 
+            gap: 25px; 
+            margin-top: 20px;
         }
+
+        .card { 
+            background: var(--bg-card); 
+            border-radius: 16px; 
+            overflow: hidden;
+            cursor: pointer; 
+            transition: var(--transition); 
+            border: 1px solid transparent;
+            position: relative;
+        }
+
+        .card:hover { 
+            transform: translateY(-8px); 
+            border-color: var(--accent);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.4);
+        }
+
+        .card-info { padding: 15px; }
+        .card-info h4 { margin: 0; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        /* Radio Player Styling */
+        .radio-header {
+            background: linear-gradient(90deg, #1a1a1a, #252525);
+            padding: 40px;
+            text-align: center;
+            border-bottom: 1px solid #333;
+        }
+
+        #radio-title { margin-bottom: 20px; font-weight: 300; letter-spacing: 1px; }
+
+        audio { 
+            filter: invert(100%) hue-rotate(180deg) brightness(1.5); 
+            width: 100%; max-width: 500px; height: 35px;
+        }
+
     </style>
 </head>
 <body>
 
-    <nav class="sidebar">
-        <div class="logo"><span>🌀</span> VORTEX</div>
-        <div class="nav-links">
-            <div class="nav-item active" onclick="switchMode('tv')">📺 Televisión</div>
-            <div class="nav-item" onclick="switchMode('radio')">📻 Radio Mundial</div>
-            <div class="nav-item">⭐ Favoritos</div>
-            <div class="nav-item">⚙️ Ajustes</div>
+    <aside class="sidebar">
+        <div class="logo">VORTEX</div>
+        <div class="nav-item active" onclick="showGUI('tv-gui', this)"><span>📺</span> TV En Vivo</div>
+        <div class="nav-item" onclick="showGUI('radio-gui', this)"><span>📻</span> Radio Digital</div>
+    </aside>
+
+    <main id="tv-gui" class="gui-view active">
+        <div class="player-zone">
+            <video id="tv-video" controls poster="https://images.unsplash.com/photo-1594909122845-11baa439b7bf?auto=format&fit=crop&q=80&w=1000"></video>
         </div>
-    </nav>
-
-    <main class="main-content">
-        <header class="top-header">
-            <div class="search-box">
-                <span>🔍</span>
-                <input type="text" id="global-search" placeholder="Buscar canales, países o emisoras...">
-            </div>
-            <div id="status-tag" style="font-size: 12px; color: var(--text-dim);">● SISTEMA WEB ACTIVO</div>
-        </header>
-
-        <div class="player-wrapper">
-            <div class="video-container" id="v-cont">
-                <div class="static-overlay"></div>
-                <video id="video" controls></video>
-                <audio id="audio-player"></audio>
-            </div>
+        <div class="search-container">
+            <input type="text" id="tv-search" class="search-bar" placeholder="Buscar canales de televisión mundial...">
         </div>
-
-        <div class="scroll-area">
-            <div class="section-title">
-                <span id="list-title">Explorar Canales de TV</span>
-                <span style="font-size: 12px; color: var(--accent);">EN VIVO</span>
-            </div>
-            <div class="grid-container" id="main-grid">
+        <div class="content-zone">
+            <div class="grid" id="tv-grid">
                 </div>
         </div>
     </main>
 
+    <main id="radio-gui" class="gui-view">
+        <div class="radio-header">
+            <h2 id="radio-title">Selecciona una emisora</h2>
+            <audio id="radio-audio" controls></audio>
+        </div>
+        <div class="search-container">
+            <input type="text" id="radio-search" class="search-bar" placeholder="Buscar emisoras por nombre o género...">
+        </div>
+        <div class="content-zone">
+            <div class="grid" id="radio-grid"></div>
+        </div>
+    </main>
+
     <script>
-        const video = document.getElementById('video');
-        const audio = document.getElementById('audio-player');
-        const vCont = document.getElementById('v-cont');
-        const mainGrid = document.getElementById('main-grid');
-        const listTitle = document.getElementById('list-title');
-        
-        let allChannels = [];
-        let hls = null;
-        let currentMode = 'tv';
-
-        async function switchMode(mode) {
-            currentMode = mode;
-            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-            event.currentTarget.classList.add('active');
-            
-            if(mode === 'tv') {
-                listTitle.innerText = "Explorar Canales de TV";
-                renderTV();
-            } else {
-                listTitle.innerText = "Emisoras de Radio Globales";
-                searchRadios();
-            }
+        function showGUI(id, el) {
+            document.querySelectorAll('.gui-view').forEach(g => g.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            el.classList.add('active');
         }
 
-        function playTV(url) {
-            audio.pause();
-            vCont.classList.remove('video-active');
-            if(hls) hls.destroy();
+        // Simulación de carga y renderizado (Lógica mejorada)
+        async function loadRadio(q = 'Colombia') {
+            const grid = document.getElementById('radio-grid');
+            grid.innerHTML = '<p style="color:var(--text-dim)">Cargando emisoras...</p>';
             
-            if(Hls.isSupported()){
-                hls = new Hls();
-                hls.loadSource(url);
-                hls.attachMedia(video);
-                hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                    video.play();
-                    vCont.classList.add('video-active');
-                });
-            } else {
-                video.src = url;
-                video.play();
-                vCont.classList.add('video-active');
-            }
-        }
-
-        async function searchRadios(query = 'Top') {
-            mainGrid.innerHTML = '';
             try {
-                const res = await fetch(`https://de1.api.radio-browser.info/json/stations/byname/${query}?limit=40`);
-                const radios = await res.json();
-                radios.forEach(r => {
+                const res = await fetch(`https://de1.api.radio-browser.info/json/stations/byname/${q}?limit=40`);
+                const data = await res.json();
+                grid.innerHTML = '';
+                
+                data.forEach(r => {
                     const card = document.createElement('div');
                     card.className = 'card';
+                    card.innerHTML = `
+                        <div style="height:120px; background:#222; display:flex; align-items:center; justify-content:center; font-size:2rem;">📻</div>
+                        <div class="card-info">
+                            <h4>${r.name}</h4>
+                            <small style="color:var(--text-dim)">${r.country}</small>
+                        </div>
+                    `;
                     card.onclick = () => {
-                        video.pause();
-                        vCont.classList.remove('video-active');
+                        document.getElementById('radio-title').innerText = `Reproduciendo: ${r.name}`;
+                        const audio = document.getElementById('radio-audio');
                         audio.src = r.url_resolved;
                         audio.play();
                     };
-                    card.innerHTML = `
-                        <div class="card-img"><img src="${r.favicon}" onerror="this.src='https://cdn-icons-png.flaticon.com/512/1251/1251644.png'"></div>
-                        <h4>${r.name}</h4>
-                        <p>${r.country}</p>
-                    `;
-                    mainGrid.appendChild(card);
+                    grid.appendChild(card);
                 });
-            } catch(e) {}
+            } catch (e) {
+                grid.innerHTML = '<p>Error al cargar radios.</p>';
+            }
         }
 
-        function renderTV() {
-            const query = document.getElementById('global-search').value.toLowerCase();
-            mainGrid.innerHTML = '';
-            allChannels.filter(c => c.name.toLowerCase().includes(query)).slice(0, 50).forEach(ch => {
-                const card = document.createElement('div');
-                card.className = 'card';
-                card.onclick = () => playTV(ch.url);
-                card.innerHTML = `
-                    <div class="card-img"><img src="${ch.logo}" onerror="this.src='https://cdn-icons-png.flaticon.com/512/3135/3135715.png'"></div>
-                    <h4>${ch.name}</h4>
-                    <p>CANAL TV</p>
-                `;
-                mainGrid.appendChild(card);
-            });
-        }
-
-        async function init() {
-            try {
-                const res = await fetch('https://iptv-org.github.io/iptv/index.country.m3u');
-                const text = await res.text();
-                const lines = text.split('\n');
-                let ch = {};
-                lines.forEach(line => {
-                    if (line.startsWith('#EXTINF:')) {
-                        ch.name = line.split(',')[1];
-                        ch.logo = (line.match(/tvg-logo="([^"]*)"/) || [])[1] || '';
-                    } else if (line.startsWith('http')) {
-                        ch.url = line; if (ch.name) allChannels.push({ ...ch }); ch = {};
-                    }
-                });
-                renderTV();
-            } catch (e) {}
-        }
-
-        document.getElementById('global-search').addEventListener('input', () => {
-            if(currentMode === 'tv') renderTV();
-            else if(document.getElementById('global-search').value.length > 2) searchRadios(document.getElementById('global-search').value);
+        // Escuchar búsquedas
+        document.getElementById('radio-search').addEventListener('keypress', (e) => {
+            if(e.key === 'Enter') loadRadio(e.target.value);
         });
 
-        init();
+        // Inicialización
+        loadRadio();
     </script>
 </body>
 </html>
