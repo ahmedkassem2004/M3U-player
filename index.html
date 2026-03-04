@@ -1,176 +1,350 @@
+<!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <title id="app-title">IPTV PLAYER</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VORTEX | Hub de Medios</title>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <style>
+        :root {
+            --accent: #FF5722;
+            --bg-body: #050505;
+            --bg-sidebar: #0f0f0f;
+            --bg-card: #1a1a1a;
+            --text-main: #ffffff;
+            --text-dim: #a0a0a0;
+            --sidebar-width: 260px;
+        }
 
-  <!-- ICONO y MANIFEST para PWA -->
-  <link rel="icon" href="https://cdn-icons-png.flaticon.com/512/4607/4607871.png" />
-  <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/4607/4607871.png" />
-  <meta name="theme-color" content="#0a0a0a" />
-  <link rel="manifest" href='data:application/json,{ "name":"IPTV Player","short_name":"IPTV","start_url":".","display":"standalone","background_color":"#0a0a0a","theme_color":"#0a0a0a","icons":[{"src":"https://cdn-icons-png.flaticon.com/512/4607/4607871.png","sizes":"512x512","type":"image/png"}]}'>
+        body {
+            margin: 0;
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
 
-  <!-- HLS.js para M3U8 -->
-  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+        /* --- SIDEBAR IZQUIERDO --- */
+        nav.sidebar {
+            width: var(--sidebar-width);
+            background: var(--bg-sidebar);
+            border-right: 1px solid rgba(255,255,255,0.05);
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            flex-shrink: 0;
+        }
 
-  <link rel="stylesheet" href="./style.css" />
+        .logo {
+            font-size: 24px;
+            font-weight: 900;
+            color: var(--accent);
+            letter-spacing: -1px;
+            margin-bottom: 40px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .nav-links {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .nav-item {
+            padding: 12px 16px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: 0.2s;
+            color: var(--text-dim);
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .nav-item:hover, .nav-item.active {
+            background: rgba(255,87,34,0.1);
+            color: var(--accent);
+        }
+
+        /* --- CONTENIDO PRINCIPAL --- */
+        main.main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        header.top-header {
+            height: 70px;
+            padding: 0 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(5,5,5,0.8);
+            backdrop-filter: blur(10px);
+            z-index: 10;
+        }
+
+        .search-box {
+            background: var(--bg-card);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 50px;
+            padding: 8px 20px;
+            width: 400px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .search-box input {
+            background: none;
+            border: none;
+            color: white;
+            width: 100%;
+            outline: none;
+        }
+
+        /* --- ÁREA DEL REPRODUCTOR --- */
+        .player-wrapper {
+            background: #000;
+            width: 100%;
+            max-height: 500px;
+            position: relative;
+            display: flex;
+            justify-content: center;
+        }
+
+        .video-container {
+            width: 100%;
+            max-width: 1200px;
+            aspect-ratio: 16/9;
+            position: relative;
+            background: #000;
+        }
+
+        video { width: 100%; height: 100%; }
+
+        .static-overlay {
+            position: absolute; inset: 0; z-index: 2; pointer-events: none;
+            background: url('https://media.giphy.com/media/oEI9uWUicHk5i/giphy.gif');
+            background-size: cover; opacity: 0.1; filter: grayscale(1);
+        }
+        .video-active .static-overlay { display: none; }
+
+        /* --- GRID DE CANALES --- */
+        .scroll-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 30px;
+        }
+
+        .section-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 20px;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 15px;
+            transition: 0.3s;
+            cursor: pointer;
+            border: 1px solid transparent;
+            text-align: center;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            background: #252525;
+            border-color: var(--accent);
+        }
+
+        .card-img {
+            width: 80px;
+            height: 80px;
+            background: #000;
+            border-radius: 12px;
+            margin: 0 auto 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px;
+        }
+
+        .card-img img { max-width: 100%; max-height: 100%; object-fit: contain; }
+
+        .card h4 { margin: 0; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .card p { margin: 5px 0 0; font-size: 11px; color: var(--accent); font-weight: 700; }
+
+        /* --- RESPONSIVE --- */
+        @media (max-width: 768px) {
+            nav.sidebar { display: none; }
+            .search-box { width: 100%; }
+        }
+    </style>
 </head>
-<body class="dark-mode">
-  <!-- Botón móvil para mostrar lista -->
-  <button id="toggle-list-btn" aria-label="Mostrar lista">☰ Canales</button>
+<body>
 
-  <div class="app" id="app">
-    <!-- SIDEBAR / LISTA -->
-    <aside id="left">
-      <header class="sidebar-header">
-        <div class="app-brand">
-          <img src="https://cdn-icons-png.flaticon.com/512/4607/4607871.png" alt="IPTV" />
-          <div class="app-brand-text">
-            <span class="app-title">IPTV</span>
-            <span class="app-subtitle">Lista global iptv-org</span>
-          </div>
+    <nav class="sidebar">
+        <div class="logo"><span>🌀</span> VORTEX</div>
+        <div class="nav-links">
+            <div class="nav-item active" onclick="switchMode('tv')">📺 Televisión</div>
+            <div class="nav-item" onclick="switchMode('radio')">📻 Radio Mundial</div>
+            <div class="nav-item">⭐ Favoritos</div>
+            <div class="nav-item">⚙️ Ajustes</div>
         </div>
-        <button id="sidebar-close" aria-label="Cerrar lista">✕</button>
-      </header>
+    </nav>
 
-      <div id="controls-container">
-        <div class="control-row">
-          <select id="language-select">
-            <option value="es" selected>🇪🇸 Español</option>
-            <option value="en">🇬🇧 English</option>
-            <option value="pt">🇵🇹 Português</option>
-            <option value="ar">العربية</option>
-          </select>
-        </div>
-
-        <div class="control-row control-row-inline">
-          <div class="control-chip">
-            <label for="country-select">País</label>
-            <select id="country-select">
-              <option value="" id="opt-all-countries">Cargando Países...</option>
-            </select>
-          </div>
-          <div class="control-chip">
-            <label for="category-select">Categoría</label>
-            <select id="category-select">
-              <option value="" id="opt-all-categories">Cargando Categorías...</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="control-row search-row">
-          <span class="search-icon">🔍</span>
-          <input id="search" placeholder="Buscar canal..." />
-          <button id="clear-search" aria-label="Limpiar búsqueda">✕</button>
-        </div>
-
-        <div class="filter-chips">
-          <button class="pill-filter pill-active" data-filter="all">Todos</button>
-          <button class="pill-filter" data-filter="favs">★ Favoritos</button>
-          <button class="pill-filter" data-filter="hist">⟲ Historial</button>
-        </div>
-      </div>
-
-      <div id="list" role="listbox" aria-label="Lista de canales"></div>
-    </aside>
-
-    <!-- PLAYER -->
-    <main id="playerWrap">
-      <div class="player-shell">
-        <header class="top-bar">
-          <div class="top-bar-left">
-            <button id="top-menu-btn" class="icon-btn" aria-label="Mostrar lista">☰</button>
-            <div class="now-playing">
-              <span class="now-label">Reproduciendo</span>
-              <span id="nowTitle" class="now-title">Selecciona un canal</span>
+    <main class="main-content">
+        <header class="top-header">
+            <div class="search-box">
+                <span>🔍</span>
+                <input type="text" id="global-search" placeholder="Buscar canales, países o emisoras...">
             </div>
-          </div>
-          <div class="top-bar-right">
-            <button id="btn-settings-top" class="icon-btn" aria-label="Ajustes">⚙️</button>
-          </div>
+            <div id="status-tag" style="font-size: 12px; color: var(--text-dim);">● SISTEMA WEB ACTIVO</div>
         </header>
 
-        <div class="video-wrapper">
-          <video id="video" playsinline controls crossorigin="anonymous"></video>
-
-          <div id="overlay" class="overlay" role="status" aria-hidden="true"></div>
-          <div id="spinner" class="spinnerSmall" aria-hidden="true">
-            <div class="spinner-dot"></div>
-            <span>Cargando…</span>
-          </div>
-
-          <button id="fsBtn" title="Buscar canal" aria-label="Buscar canal">📺</button>
-          <div id="fsMenu" aria-hidden="true">
-            <div class="fs-header">
-              <input id="fsSearch" class="fs-search" placeholder="Buscar canal..." />
+        <div class="player-wrapper">
+            <div class="video-container" id="v-cont">
+                <div class="static-overlay"></div>
+                <video id="video" controls></video>
+                <audio id="audio-player"></audio>
             </div>
-            <div id="fsList"></div>
-          </div>
         </div>
 
-        <footer class="mini-now-bar">
-          <div class="mini-info">
-            <div class="mini-logo" id="mini-logo"></div>
-            <div class="mini-text">
-              <span id="mini-title" class="mini-title">Sin canal</span>
-              <span id="mini-meta" class="mini-meta">Lista global IPTV-ORG</span>
+        <div class="scroll-area">
+            <div class="section-title">
+                <span id="list-title">Explorar Canales de TV</span>
+                <span style="font-size: 12px; color: var(--accent);">EN VIVO</span>
             </div>
-          </div>
-          <div class="mini-actions">
-            <button id="mini-fav-btn" class="icon-btn" title="Favorito">☆</button>
-            <button id="mini-fullscreen-btn" class="icon-btn" title="Pantalla completa">⛶</button>
-          </div>
-        </footer>
-      </div>
-
-      <!-- MODAL FAVORITOS -->
-      <div id="favoritesModal" class="modal-overlay" aria-hidden="true">
-        <div class="modal-content">
-          <h2>★ Favoritos</h2>
-          <div id="favoritesList"></div>
-          <button id="closeFavModal" class="modal-close-btn" aria-label="Cerrar favoritos">X</button>
+            <div class="grid-container" id="main-grid">
+                </div>
         </div>
-      </div>
-
-      <!-- MODAL AJUSTES -->
-      <div id="settingsModal" class="modal-overlay" aria-hidden="true">
-        <div class="modal-content">
-          <h2>⚙️ Ajustes</h2>
-          <div id="settingsContent">
-            <div class="settings-item">
-              <span>Modo Claro / Oscuro</span>
-              <label class="switch">
-                <input type="checkbox" id="lightModeToggle">
-                <span class="slider"></span>
-              </label>
-            </div>
-          </div>
-          <button id="closeSettingsModal" class="modal-close-btn" aria-label="Cerrar ajustes">X</button>
-        </div>
-      </div>
-
-      <!-- POPUP INSTALACIÓN PWA -->
-      <div id="installModal" class="modal-overlay" style="display:none;" aria-hidden="true">
-        <div class="install-modal-content">
-          <h3>Instalar aplicación</h3>
-          <p>¿Quieres instalar la app en tu dispositivo para un acceso rápido?</p>
-          <div class="install-modal-buttons">
-            <button id="btn-install-yes">Sí, instalar</button>
-            <button id="btn-install-no">No, gracias</button>
-          </div>
-        </div>
-      </div>
     </main>
-  </div>
 
-  <!-- BOTTOM NAV (MÓVIL) -->
-  <nav id="bottomMenu" aria-hidden="false">
-    <div class="menu-btn" id="btn-channels">☰<span>Canales</span></div>
-    <div class="menu-btn" id="btn-favs">★<span>Favoritos</span></div>
-    <div class="menu-btn" id="btn-hist">⟲<span>Historial</span></div>
-    <div class="menu-btn" id="btn-settings">⚙️<span>Ajustes</span></div>
-  </nav>
+    <script>
+        const video = document.getElementById('video');
+        const audio = document.getElementById('audio-player');
+        const vCont = document.getElementById('v-cont');
+        const mainGrid = document.getElementById('main-grid');
+        const listTitle = document.getElementById('list-title');
+        
+        let allChannels = [];
+        let hls = null;
+        let currentMode = 'tv';
 
-  <script src="./app.js"></script>
+        async function switchMode(mode) {
+            currentMode = mode;
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+            
+            if(mode === 'tv') {
+                listTitle.innerText = "Explorar Canales de TV";
+                renderTV();
+            } else {
+                listTitle.innerText = "Emisoras de Radio Globales";
+                searchRadios();
+            }
+        }
+
+        function playTV(url) {
+            audio.pause();
+            vCont.classList.remove('video-active');
+            if(hls) hls.destroy();
+            
+            if(Hls.isSupported()){
+                hls = new Hls();
+                hls.loadSource(url);
+                hls.attachMedia(video);
+                hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                    video.play();
+                    vCont.classList.add('video-active');
+                });
+            } else {
+                video.src = url;
+                video.play();
+                vCont.classList.add('video-active');
+            }
+        }
+
+        async function searchRadios(query = 'Top') {
+            mainGrid.innerHTML = '';
+            try {
+                const res = await fetch(`https://de1.api.radio-browser.info/json/stations/byname/${query}?limit=40`);
+                const radios = await res.json();
+                radios.forEach(r => {
+                    const card = document.createElement('div');
+                    card.className = 'card';
+                    card.onclick = () => {
+                        video.pause();
+                        vCont.classList.remove('video-active');
+                        audio.src = r.url_resolved;
+                        audio.play();
+                    };
+                    card.innerHTML = `
+                        <div class="card-img"><img src="${r.favicon}" onerror="this.src='https://cdn-icons-png.flaticon.com/512/1251/1251644.png'"></div>
+                        <h4>${r.name}</h4>
+                        <p>${r.country}</p>
+                    `;
+                    mainGrid.appendChild(card);
+                });
+            } catch(e) {}
+        }
+
+        function renderTV() {
+            const query = document.getElementById('global-search').value.toLowerCase();
+            mainGrid.innerHTML = '';
+            allChannels.filter(c => c.name.toLowerCase().includes(query)).slice(0, 50).forEach(ch => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.onclick = () => playTV(ch.url);
+                card.innerHTML = `
+                    <div class="card-img"><img src="${ch.logo}" onerror="this.src='https://cdn-icons-png.flaticon.com/512/3135/3135715.png'"></div>
+                    <h4>${ch.name}</h4>
+                    <p>CANAL TV</p>
+                `;
+                mainGrid.appendChild(card);
+            });
+        }
+
+        async function init() {
+            try {
+                const res = await fetch('https://iptv-org.github.io/iptv/index.country.m3u');
+                const text = await res.text();
+                const lines = text.split('\n');
+                let ch = {};
+                lines.forEach(line => {
+                    if (line.startsWith('#EXTINF:')) {
+                        ch.name = line.split(',')[1];
+                        ch.logo = (line.match(/tvg-logo="([^"]*)"/) || [])[1] || '';
+                    } else if (line.startsWith('http')) {
+                        ch.url = line; if (ch.name) allChannels.push({ ...ch }); ch = {};
+                    }
+                });
+                renderTV();
+            } catch (e) {}
+        }
+
+        document.getElementById('global-search').addEventListener('input', () => {
+            if(currentMode === 'tv') renderTV();
+            else if(document.getElementById('global-search').value.length > 2) searchRadios(document.getElementById('global-search').value);
+        });
+
+        init();
+    </script>
 </body>
 </html>
